@@ -1,6 +1,6 @@
-const broker = "wss://dog.lmq.cloudamqp.com:1883 "; // e.g. CloudMQTT or hosted broker
+const broker = "wss://dog.lmq.cloudamqp.com:1883/mqtt"; // e.g. CloudMQTT or hosted broker
 const options = {
-  username: "zpfipcnp:zpfipcnp", // optional
+  username: "zpfipcnp", // optional
   password: "hknnQlRofqnyqj_aQxmeoJ6vPbvK-4fX", // optional
   reconnectPeriod: 1000
 };
