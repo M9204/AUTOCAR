@@ -6,6 +6,8 @@ const options = {
 };
 
 const client = mqtt.connect(broker, options);
+client.on('connect', () => console.log("✅ MQTT Connected"));
+client.on('error', err => console.error("❌ MQTT Error:", err));
 
 const relays = [false, false, false, false]; // initial state
 
