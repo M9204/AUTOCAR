@@ -1,14 +1,12 @@
-const broker = "wss:dog.lmq.cloudamqp.com:8883";
- // e.g. CloudMQTT or hosted broker
-const options = {
-  username: "zpfipcnp", // from dashboard
-  password: "hknnQlRofqnyqj_aQxmeoJ6vPbvK-4fX", // from dashboard
-  clean: true,
-  connectTimeout: 1000,
-  reconnectPeriod: 1000,
-};
 
-const client = mqtt.connect(broker, options);
+const client = mqtt.connect("wss://dog.lmq.cloudamqp.com:443/mqtt", {
+  username: "zpfipcnp",
+  password: "hknnQlRofqnyqj_aQxmeoJ6vPbvK-4fX",
+  connectTimeout: 5000,
+  reconnectPeriod: 4000,
+  clean: true,
+});
+
 client.on('connect', () => console.log("✅ MQTT Connected"));
 client.on('error', err => console.error("❌ MQTT Error:", err));
 
