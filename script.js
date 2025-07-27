@@ -1,4 +1,3 @@
-
 const client = mqtt.connect("wss://dog.lmq.cloudamqp.com:443/mqtt", {
   username: "zpfipcnp",
   password: "hknnQlRofqnyqj_aQxmeoJ6vPbvK-4fX",
@@ -7,22 +6,23 @@ const client = mqtt.connect("wss://dog.lmq.cloudamqp.com:443/mqtt", {
   clean: true,
 });
 
-client.on('connect', () => console.log("✅ MQTT Connected"));
-client.on('error', err => console.error("❌ MQTT Error:", err));
-
 const relays = [false, false, false, false]; // initial state
 
 client.on('connect', () => {
-  console.log("Connected to MQTT");
+  console.log("✅ MQTT Connected");
   client.subscribe("car/#");
 });
+
+client.on('error', err => console.error("❌ MQTT Error:", err));
 
 client.on('message', (topic, message) => {
   const msg = message.toString();
   if (topic.startsWith("car/relay/")) {
     const index = parseInt(topic.split("/")[2]);
-    relays[index] = msg === "on";
-    updateRelayUI(index);
+    if (!isNaN(index) && index >= 0 && index < relays.length) {
+      relays[index] = msg === "on";
+      updateRelayUI(index);
+    }
   }
 });
 
@@ -37,11 +37,12 @@ function toggleRelay(index) {
 
 function updateRelayUI(index) {
   const btn = document.getElementById(`relay${index}`);
-  btn.innerText = `Relay ${index}: ${relays[index] ? "ON" : "OFF"}`;
-  btn.className = "relay-btn " + (relays[index] ? "relay-on" : "relay-off");
+  if (btn) {
+    btn.innerText = `Relay ${index}: ${relays[index] ? "ON" : "OFF"}`;
+    btn.className = "relay-btn " + (relays[index] ? "relay-on" : "relay-off");
+  }
 }
 
-// Generate buttons
 window.onload = () => {
   const relayDiv = document.getElementById("relays");
   for (let i = 0; i < relays.length; i++) {
