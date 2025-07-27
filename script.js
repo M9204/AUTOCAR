@@ -1,4 +1,5 @@
-const broker = "wss://dog.lmq.cloudamqp.com:1883/mqtt"; // e.g. CloudMQTT or hosted broker
+const broker = "wss://test.mosquitto.org:8081/mqtt";
+ // e.g. CloudMQTT or hosted broker
 const options = {
   username: "zpfipcnp", // optional
   password: "hknnQlRofqnyqj_aQxmeoJ6vPbvK-4fX", // optional
