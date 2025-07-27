@@ -2,7 +2,7 @@ const broker = "wss://test.mosquitto.org:8081/mqtt";
  // e.g. CloudMQTT or hosted broker
 
 
-const client = mqtt.connect(broker, options);
+const client = mqtt.connect(broker);
 client.on('connect', () => console.log("✅ MQTT Connected"));
 client.on('error', err => console.error("❌ MQTT Error:", err));
 
