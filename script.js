@@ -1,10 +1,6 @@
 const broker = "wss://test.mosquitto.org:8081/mqtt";
  // e.g. CloudMQTT or hosted broker
-const options = {
-  username: "zpfipcnp", // optional
-  password: "hknnQlRofqnyqj_aQxmeoJ6vPbvK-4fX", // optional
-  reconnectPeriod: 1000
-};
+
 
 const client = mqtt.connect(broker, options);
 client.on('connect', () => console.log("✅ MQTT Connected"));
