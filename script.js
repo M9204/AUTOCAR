@@ -1,4 +1,4 @@
-const broker = "wss:dog.lmq.cloudamqp.com:8883/mqtt";
+const broker = "wss:dog.lmq.cloudamqp.com:8883";
  // e.g. CloudMQTT or hosted broker
 const options = {
   username: "zpfipcnp", // from dashboard
