@@ -1,9 +1,22 @@
-const client = mqtt.connect("wss://dog.lmq.cloudamqp.com:443/mqtt", {
-  username: "zpfipcnp",
-  password: "hknnQlRofqnyqj_aQxmeoJ6vPbvK-4fX",
-  connectTimeout: 5000,
+const client = mqtt.connect("wss://ddf927fd9af44789b245774345c7bf14.s1.eu.hivemq.cloud:8884/mqtt", {
+  username: "user9",  // ← replace with your actual HiveMQ Cloud username
+  password: "hknnQlRofqnyqj_aQxmeoJ6vPbvK-4fX",  // ← replace with your actual HiveMQ Cloud password
+  connectTimeout: 8000,
   reconnectPeriod: 4000,
   clean: true,
+});
+
+client.on("connect", () => {
+  console.log("✅ Connected to HiveMQ Cloud via WebSocket");
+  client.subscribe("car/#");
+});
+
+client.on("message", (topic, message) => {
+  console.log("📩 Message:", topic, message.toString());
+});
+
+client.on("error", (err) => {
+  console.error("❌ MQTT Error:", err);
 });
 
 const relays = [false, false, false, false]; // initial state
