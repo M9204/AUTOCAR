@@ -6,17 +6,22 @@ const client = mqtt.connect("wss://ddf927fd9af44789b245774345c7bf14.s1.eu.hivemq
   clean: true,
 });
 
-const relays = [false, false, false, false];
+const relays = [false, false, false, false]; // Initial relay states
 
 client.on("connect", () => {
   console.log("✅ Connected to HiveMQ Cloud via WebSocket");
   client.subscribe("car/#");
 });
 
+client.on("error", (err) => {
+  console.error("❌ MQTT Error:", err);
+});
+
 client.on("message", (topic, message) => {
   const msg = message.toString();
   console.log("📩 Message:", topic, msg);
 
+  // Handle relay updates from ESP32
   if (topic.startsWith("car/relay/")) {
     const index = parseInt(topic.split("/")[2]);
     if (!isNaN(index) && index >= 0 && index < relays.length) {
@@ -26,47 +31,30 @@ client.on("message", (topic, message) => {
   }
 });
 
-client.on("error", err => console.error("❌ MQTT Error:", err));
-
+// === FUNCTIONS ===
 function startCar() {
   client.publish("car/start", "start");
+  console.log("🚗 Start command sent");
 }
 
 function toggleRelay(index) {
   const newState = !relays[index];
   client.publish(`car/relay/${index}`, newState ? "on" : "off");
+  console.log(`🔀 Relay ${index} => ${newState ? "ON" : "OFF"}`);
 }
 
 function updateRelayUI(index) {
   const btn = document.getElementById(`relay${index}`);
   if (btn) {
+    relays[index] = relays[index]; // update state
     btn.innerText = `Relay ${index}: ${relays[index] ? "ON" : "OFF"}`;
     btn.className = "relay-btn " + (relays[index] ? "relay-on" : "relay-off");
   }
 }
-client.subscribe("car/status");
-
-client.on("message", (topic, message) => {
-  const msg = message.toString();
-
-  if(topic === "car/status") {
-    document.getElementById("status").innerText = `Status: ${msg}`;
-    document.getElementById("status").style.color = msg === "online" ? "lime" : "red";
-  }
-
-  if (topic.startsWith("car/relay/")) {
-    const index = parseInt(topic.split("/")[2]);
-    if (!isNaN(index)) {
-      relays[index] = msg === "on";
-      updateRelayUI(index);
-    }
-  }
-});
-
-
 
 window.onload = () => {
   const relayDiv = document.getElementById("relays");
+
   for (let i = 0; i < relays.length; i++) {
     const btn = document.createElement("button");
     btn.id = `relay${i}`;
