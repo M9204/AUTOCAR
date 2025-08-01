@@ -44,6 +44,26 @@ function updateRelayUI(index) {
     btn.className = "relay-btn " + (relays[index] ? "relay-on" : "relay-off");
   }
 }
+client.subscribe("car/status");
+
+client.on("message", (topic, message) => {
+  const msg = message.toString();
+
+  if(topic === "car/status") {
+    document.getElementById("status").innerText = `Status: ${msg}`;
+    document.getElementById("status").style.color = msg === "online" ? "lime" : "red";
+  }
+
+  if (topic.startsWith("car/relay/")) {
+    const index = parseInt(topic.split("/")[2]);
+    if (!isNaN(index)) {
+      relays[index] = msg === "on";
+      updateRelayUI(index);
+    }
+  }
+});
+
+
 
 window.onload = () => {
   const relayDiv = document.getElementById("relays");
