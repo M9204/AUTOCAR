@@ -42,37 +42,78 @@ client.on("message", (topic, message) => {
   }
 });
 
+let carStarted = false;
+
 function startCar() {
-  // 1️⃣ Turn off all relays first
-  for (let i = 0; i < relays.length; i++) {
-    client.publish(`car/relay/${i}`, "off");
-    relays[i] = false;
-    updateRelayUI(i);
-  }
+  if (!carStarted) {
+    carStarted = true;
 
-  // 2️⃣ Sequence to turn ON each relay with delay
-  // delays in milliseconds
-  const onDelays = [0, 1000, 3000, 6000]; // 1s, +2s, +3s
-
-  onDelays.forEach((delay, i) => {
-    setTimeout(() => {
-      client.publish(`car/relay/${i}`, "on");
-      relays[i] = true;
-      updateRelayUI(i);
-    }, delay);
-  });
-
-  // 3️⃣ Wait 5s after last relay ON before turning OFF in sequence
-  const offStartDelay = 6000 + 5000; // last ON + 5s wait
-  const offDelays = [0, 1000, 3000, 6000]; // 1s, +2s, +3s
-
-  offDelays.forEach((delay, i) => {
-    setTimeout(() => {
+    // 1️⃣ Turn OFF all relays first
+    for (let i = 0; i < relays.length; i++) {
       client.publish(`car/relay/${i}`, "off");
       relays[i] = false;
       updateRelayUI(i);
-    }, offStartDelay + delay);
-  });
+    }
+
+    // 2️⃣ Start sequence
+    setTimeout(() => { // ACC ON
+      client.publish(`car/relay/0`, "on");
+      relays[0] = true;
+      updateRelayUI(0);
+    }, 0);
+
+    setTimeout(() => { // IGN ON
+      client.publish(`car/relay/1`, "on");
+      relays[1] = true;
+      updateRelayUI(1);
+    }, 500);
+
+    setTimeout(() => { // START ON
+      client.publish(`car/relay/2`, "on");
+      relays[2] = true;
+      updateRelayUI(2);
+    }, 1500);
+
+    setTimeout(() => { // START OFF (simulate key release)
+      client.publish(`car/relay/2`, "off");
+      relays[2] = false;
+      updateRelayUI(2);
+    }, 2500);
+
+    setTimeout(() => { // AC ON
+      client.publish(`car/relay/3`, "on");
+      relays[3] = true;
+      updateRelayUI(3);
+    }, 3500);
+
+  } else {
+    // 🔹 STOP SEQUENCE
+    carStarted = false;
+
+    setTimeout(() => { // AC OFF
+      client.publish(`car/relay/3`, "off");
+      relays[3] = false;
+      updateRelayUI(3);
+    }, 0);
+
+    setTimeout(() => { // START OFF
+      client.publish(`car/relay/2`, "off");
+      relays[2] = false;
+      updateRelayUI(2);
+    }, 500);
+
+    setTimeout(() => { // IGN OFF
+      client.publish(`car/relay/1`, "off");
+      relays[1] = false;
+      updateRelayUI(1);
+    }, 1000);
+
+    setTimeout(() => { // ACC OFF
+      client.publish(`car/relay/0`, "off");
+      relays[0] = false;
+      updateRelayUI(0);
+    }, 1500);
+  }
 }
 
 function toggleRelay(index) {
