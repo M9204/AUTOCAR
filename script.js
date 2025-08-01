@@ -1,10 +1,12 @@
 const client = mqtt.connect("wss://ddf927fd9af44789b245774345c7bf14.s1.eu.hivemq.cloud:8884/mqtt", {
-  username: "user9",  // ← replace with your actual HiveMQ Cloud username
-  password: "hknnQlRofqnyqj_aQxmeoJ6vPbvK-4fX",  // ← replace with your actual HiveMQ Cloud password
+  username: "user9",
+  password: "hknnQlRofqnyqj_aQxmeoJ6vPbvK-4fX",
   connectTimeout: 8000,
   reconnectPeriod: 4000,
   clean: true,
 });
+
+const relays = [false, false, false, false];
 
 client.on("connect", () => {
   console.log("✅ Connected to HiveMQ Cloud via WebSocket");
@@ -12,24 +14,9 @@ client.on("connect", () => {
 });
 
 client.on("message", (topic, message) => {
-  console.log("📩 Message:", topic, message.toString());
-});
-
-client.on("error", (err) => {
-  console.error("❌ MQTT Error:", err);
-});
-
-const relays = [false, false, false, false]; // initial state
-
-client.on('connect', () => {
-  console.log("✅ MQTT Connected");
-  client.subscribe("car/#");
-});
-
-client.on('error', err => console.error("❌ MQTT Error:", err));
-
-client.on('message', (topic, message) => {
   const msg = message.toString();
+  console.log("📩 Message:", topic, msg);
+
   if (topic.startsWith("car/relay/")) {
     const index = parseInt(topic.split("/")[2]);
     if (!isNaN(index) && index >= 0 && index < relays.length) {
@@ -38,6 +25,8 @@ client.on('message', (topic, message) => {
     }
   }
 });
+
+client.on("error", err => console.error("❌ MQTT Error:", err));
 
 function startCar() {
   client.publish("car/start", "start");
