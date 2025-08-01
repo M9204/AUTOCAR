@@ -43,7 +43,36 @@ client.on("message", (topic, message) => {
 });
 
 function startCar() {
-  client.publish("car/start", "start");
+  // 1️⃣ Turn off all relays first
+  for (let i = 0; i < relays.length; i++) {
+    client.publish(`car/relay/${i}`, "off");
+    relays[i] = false;
+    updateRelayUI(i);
+  }
+
+  // 2️⃣ Sequence to turn ON each relay with delay
+  // delays in milliseconds
+  const onDelays = [0, 1000, 3000, 6000]; // 1s, +2s, +3s
+
+  onDelays.forEach((delay, i) => {
+    setTimeout(() => {
+      client.publish(`car/relay/${i}`, "on");
+      relays[i] = true;
+      updateRelayUI(i);
+    }, delay);
+  });
+
+  // 3️⃣ Wait 5s after last relay ON before turning OFF in sequence
+  const offStartDelay = 6000 + 5000; // last ON + 5s wait
+  const offDelays = [0, 1000, 3000, 6000]; // 1s, +2s, +3s
+
+  offDelays.forEach((delay, i) => {
+    setTimeout(() => {
+      client.publish(`car/relay/${i}`, "off");
+      relays[i] = false;
+      updateRelayUI(i);
+    }, offStartDelay + delay);
+  });
 }
 
 function toggleRelay(index) {
