@@ -17,7 +17,7 @@ const statusDiv = document.getElementById("espStatus");
 client.on("connect", () => {
   console.log("✅ Connected to HiveMQ");
   client.subscribe("car/#");
-  client.subscribe("car/carStarted"); // Subscribe to carStarted state
+  client.subscribe("car/carStarted"); // subscribe to car start/stop retained topic
 
   statusDiv.innerText = "MQTT Connected ✅";
   statusDiv.style.color = "green";
@@ -33,11 +33,11 @@ client.on("message", (topic, message) => {
   const msg = message.toString();
   console.log("📩 Message:", topic, msg);
 
-  // Update relay status from ESP
+  // Update relay states
   if (topic.startsWith("car/relay/") && topic.endsWith("/state")) {
     const index = parseInt(topic.split("/")[2]);
     if (!isNaN(index) && index >= 0 && index < relays.length) {
-      relays[index] = msg === "on";
+      relays[index] = (msg === "on");
       updateRelayUI(index);
     }
   }
@@ -48,68 +48,46 @@ client.on("message", (topic, message) => {
     statusDiv.style.color = msg.includes("online") ? "green" : "red";
   }
 
-  // Update carStarted state and button text
+  // Update car started state and main button text
   if (topic === "car/carStarted") {
     carStarted = (msg === "true");
     updateMainBtnText();
   }
 });
 
-// ==== CAR START / STOP SEQUENCE ====
+// ==== Start/Stop car ====
 function startCar() {
   if (!carStarted) {
-    carStarted = true;
-    client.publish("car/carStarted", "true", { retain: true });
-
-    // Turn OFF all relays first
-    for (let i = 0; i < relays.length; i++) {
-      client.publish(`car/relay/${i}`, "off");
-      relays[i] = false;
-      updateRelayUI(i);
-    }
-
-    // Start sequence
-    setTimeout(() => { client.publish(`car/relay/0`, "on"); }, 0);      // ACC ON
-    setTimeout(() => { client.publish(`car/relay/1`, "on"); }, 500);    // IGN ON
-    setTimeout(() => { client.publish(`car/relay/2`, "on"); }, 1500);   // START ON
-    setTimeout(() => { client.publish(`car/relay/2`, "off"); }, 2500);  // START OFF
-    setTimeout(() => { client.publish(`car/relay/3`, "on"); }, 3500);   // AC ON
-
+    client.publish("car/start", "start");
   } else {
-    carStarted = false;
-    client.publish("car/carStarted", "false", { retain: true });
-
-    // Stop sequence
-    setTimeout(() => { client.publish(`car/relay/3`, "off"); }, 0);     // AC OFF
-    setTimeout(() => { client.publish(`car/relay/1`, "off"); }, 500);   // IGN OFF
-    setTimeout(() => { client.publish(`car/relay/0`, "off"); }, 1000);  // ACC OFF
+    client.publish("car/start", "stop");
   }
-  updateMainBtnText();
 }
 
-// ==== TOGGLE RELAY MANUALLY ====
+// ==== Toggle individual relay ====
 function toggleRelay(index) {
   const newState = !relays[index];
   client.publish(`car/relay/${index}`, newState ? "on" : "off");
 }
 
-// ==== UPDATE UI BUTTONS ====
+// ==== Update relay buttons UI ====
 function updateRelayUI(index) {
   const btn = document.getElementById(`relay${index}`);
-  if (btn) {
-    btn.innerText = `Relay ${index}: ${relays[index] ? "ON" : "OFF"}`;
-    btn.className = "relay-btn " + (relays[index] ? "relay-on" : "relay-off");
-  }
+  if (!btn) return;
+
+  btn.innerText = `Relay ${index}: ${relays[index] ? "ON" : "OFF"}`;
+  btn.className = "relay-btn " + (relays[index] ? "relay-on" : "relay-off");
 }
 
-// ==== UPDATE START/STOP BUTTON TEXT ====
+// ==== Update Start/Stop button text ====
 function updateMainBtnText() {
   const mainBtn = document.getElementById("mainBtn");
   if (!mainBtn) return;
+
   mainBtn.innerText = carStarted ? "Stop Car" : "Start Car";
 }
 
-// ==== INIT BUTTONS ====
+// ==== Initialize relay buttons and main button text ====
 window.onload = () => {
   const relayDiv = document.getElementById("relays");
   for (let i = 0; i < relays.length; i++) {
@@ -121,5 +99,5 @@ window.onload = () => {
     relayDiv.appendChild(btn);
   }
 
-  updateMainBtnText(); // Initialize main button text on load
+  updateMainBtnText();
 };
