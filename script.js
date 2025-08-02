@@ -17,6 +17,8 @@ const statusDiv = document.getElementById("espStatus");
 client.on("connect", () => {
   console.log("✅ Connected to HiveMQ");
   client.subscribe("car/#");
+  client.subscribe("car/carStarted"); // Subscribe to carStarted state
+
   statusDiv.innerText = "MQTT Connected ✅";
   statusDiv.style.color = "green";
 });
@@ -31,7 +33,7 @@ client.on("message", (topic, message) => {
   const msg = message.toString();
   console.log("📩 Message:", topic, msg);
 
-  // ✅ Update relay status from ESP
+  // Update relay status from ESP
   if (topic.startsWith("car/relay/") && topic.endsWith("/state")) {
     const index = parseInt(topic.split("/")[2]);
     if (!isNaN(index) && index >= 0 && index < relays.length) {
@@ -40,69 +42,50 @@ client.on("message", (topic, message) => {
     }
   }
 
-  // ✅ Update ESP status
+  // Update ESP status
   if (topic === "car/status") {
     statusDiv.innerText = msg.includes("online") ? "ESP Online ✅" : "ESP Offline ❌";
     statusDiv.style.color = msg.includes("online") ? "green" : "red";
   }
+
+  // Update carStarted state and button text
+  if (topic === "car/carStarted") {
+    carStarted = (msg === "true");
+    updateMainBtnText();
+  }
 });
 
 // ==== CAR START / STOP SEQUENCE ====
-//let carStarted = false; // initial state
-
 function startCar() {
-  const btn = document.getElementById("mainBtn");
-
   if (!carStarted) {
     carStarted = true;
-    btn.innerText = "Stop Car";
+    client.publish("car/carStarted", "true", { retain: true });
 
-    // Start sequence
+    // Turn OFF all relays first
     for (let i = 0; i < relays.length; i++) {
       client.publish(`car/relay/${i}`, "off");
       relays[i] = false;
       updateRelayUI(i);
     }
 
-    setTimeout(() => { client.publish(`car/relay/0`, "on"); }, 0);     // ACC ON
-    setTimeout(() => { client.publish(`car/relay/1`, "on"); }, 500);   // IGN ON
-    setTimeout(() => { client.publish(`car/relay/2`, "on"); }, 1500);  // START ON
-    setTimeout(() => { client.publish(`car/relay/2`, "off"); }, 2500); // START OFF (key release)
-    setTimeout(() => { client.publish(`car/relay/3`, "on"); }, 3500);  // AC ON
+    // Start sequence
+    setTimeout(() => { client.publish(`car/relay/0`, "on"); }, 0);      // ACC ON
+    setTimeout(() => { client.publish(`car/relay/1`, "on"); }, 500);    // IGN ON
+    setTimeout(() => { client.publish(`car/relay/2`, "on"); }, 1500);   // START ON
+    setTimeout(() => { client.publish(`car/relay/2`, "off"); }, 2500);  // START OFF
+    setTimeout(() => { client.publish(`car/relay/3`, "on"); }, 3500);   // AC ON
 
   } else {
     carStarted = false;
-    btn.innerText = "Start Car";
+    client.publish("car/carStarted", "false", { retain: true });
 
     // Stop sequence
     setTimeout(() => { client.publish(`car/relay/3`, "off"); }, 0);     // AC OFF
     setTimeout(() => { client.publish(`car/relay/1`, "off"); }, 500);   // IGN OFF
     setTimeout(() => { client.publish(`car/relay/0`, "off"); }, 1000);  // ACC OFF
-
-    // Also update UI states accordingly
-    for (let i = 0; i < relays.length; i++) {
-      relays[i] = false;
-      updateRelayUI(i);
-    }
   }
+  updateMainBtnText();
 }
-
-// On page load, set button text correctly based on initial state
-window.onload = () => {
-  const relayDiv = document.getElementById("relays");
-  const btn = document.getElementById("mainBtn");
-  btn.innerText = carStarted ? "Stop Car" : "Start Car";
-
-  for (let i = 0; i < relays.length; i++) {
-    const btnRelay = document.createElement("button");
-    btnRelay.id = `relay${i}`;
-    btnRelay.className = "relay-btn relay-off";
-    btnRelay.innerText = `Relay ${i}: OFF`;
-    btnRelay.onclick = () => toggleRelay(i);
-    relayDiv.appendChild(btnRelay);
-  }
-};
-
 
 // ==== TOGGLE RELAY MANUALLY ====
 function toggleRelay(index) {
@@ -119,7 +102,14 @@ function updateRelayUI(index) {
   }
 }
 
-/* ==== INIT BUTTONS ====
+// ==== UPDATE START/STOP BUTTON TEXT ====
+function updateMainBtnText() {
+  const mainBtn = document.getElementById("mainBtn");
+  if (!mainBtn) return;
+  mainBtn.innerText = carStarted ? "Stop Car" : "Start Car";
+}
+
+// ==== INIT BUTTONS ====
 window.onload = () => {
   const relayDiv = document.getElementById("relays");
   for (let i = 0; i < relays.length; i++) {
@@ -130,6 +120,6 @@ window.onload = () => {
     btn.onclick = () => toggleRelay(i);
     relayDiv.appendChild(btn);
   }
-};
-*/
 
+  updateMainBtnText(); // Initialize main button text on load
+};
