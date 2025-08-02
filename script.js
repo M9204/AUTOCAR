@@ -48,55 +48,61 @@ client.on("message", (topic, message) => {
 });
 
 // ==== CAR START / STOP SEQUENCE ====
+//let carStarted = false; // initial state
+
 function startCar() {
+  const btn = document.getElementById("mainBtn");
+
   if (!carStarted) {
     carStarted = true;
+    btn.innerText = "Stop Car";
 
-    // 1️⃣ Turn OFF all relays first
+    // Start sequence
     for (let i = 0; i < relays.length; i++) {
       client.publish(`car/relay/${i}`, "off");
       relays[i] = false;
       updateRelayUI(i);
     }
 
-    // 2️⃣ Start sequence
-    setTimeout(() => { // ACC ON
-      client.publish(`car/relay/0`, "on");
-    }, 0);
-
-    setTimeout(() => { // IGN ON
-      client.publish(`car/relay/1`, "on");
-    }, 500);
-
-    setTimeout(() => { // START ON
-      client.publish(`car/relay/2`, "on");
-    }, 1500);
-
-    setTimeout(() => { // START OFF (simulate key release)
-      client.publish(`car/relay/2`, "off");
-    }, 2500);
-
-    setTimeout(() => { // AC ON
-      client.publish(`car/relay/3`, "on");
-    }, 3500);
+    setTimeout(() => { client.publish(`car/relay/0`, "on"); }, 0);     // ACC ON
+    setTimeout(() => { client.publish(`car/relay/1`, "on"); }, 500);   // IGN ON
+    setTimeout(() => { client.publish(`car/relay/2`, "on"); }, 1500);  // START ON
+    setTimeout(() => { client.publish(`car/relay/2`, "off"); }, 2500); // START OFF (key release)
+    setTimeout(() => { client.publish(`car/relay/3`, "on"); }, 3500);  // AC ON
 
   } else {
-    // 🔹 STOP SEQUENCE
     carStarted = false;
+    btn.innerText = "Start Car";
 
-    setTimeout(() => { // AC OFF
-      client.publish(`car/relay/3`, "off");
-    }, 0);
+    // Stop sequence
+    setTimeout(() => { client.publish(`car/relay/3`, "off"); }, 0);     // AC OFF
+    setTimeout(() => { client.publish(`car/relay/1`, "off"); }, 500);   // IGN OFF
+    setTimeout(() => { client.publish(`car/relay/0`, "off"); }, 1000);  // ACC OFF
 
-    setTimeout(() => { // IGN OFF
-      client.publish(`car/relay/1`, "off");
-    }, 500);
-
-    setTimeout(() => { // ACC OFF
-      client.publish(`car/relay/0`, "off");
-    }, 1000);
+    // Also update UI states accordingly
+    for (let i = 0; i < relays.length; i++) {
+      relays[i] = false;
+      updateRelayUI(i);
+    }
   }
 }
+
+// On page load, set button text correctly based on initial state
+window.onload = () => {
+  const relayDiv = document.getElementById("relays");
+  const btn = document.getElementById("mainBtn");
+  btn.innerText = carStarted ? "Stop Car" : "Start Car";
+
+  for (let i = 0; i < relays.length; i++) {
+    const btnRelay = document.createElement("button");
+    btnRelay.id = `relay${i}`;
+    btnRelay.className = "relay-btn relay-off";
+    btnRelay.innerText = `Relay ${i}: OFF`;
+    btnRelay.onclick = () => toggleRelay(i);
+    relayDiv.appendChild(btnRelay);
+  }
+};
+
 
 // ==== TOGGLE RELAY MANUALLY ====
 function toggleRelay(index) {
@@ -113,7 +119,7 @@ function updateRelayUI(index) {
   }
 }
 
-// ==== INIT BUTTONS ====
+/* ==== INIT BUTTONS ====
 window.onload = () => {
   const relayDiv = document.getElementById("relays");
   for (let i = 0; i < relays.length; i++) {
@@ -125,4 +131,5 @@ window.onload = () => {
     relayDiv.appendChild(btn);
   }
 };
+*/
 
