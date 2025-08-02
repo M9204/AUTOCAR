@@ -1,30 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ESP32 Car Control</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ESP32 Control</title>
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-  <link rel="stylesheet" href="style.css">
   <style>
-    body { font-family: Arial, sans-serif; text-align: center; background: #f3f3f3; }
+    body { font-family: Arial, sans-serif; text-align: center; background: #f3f3f3; margin: 0; padding: 20px; }
     h1 { color: #333; }
     .relay-btn { 
       display: block; margin: 10px auto; padding: 15px 30px; 
       border: none; border-radius: 8px; font-size: 18px; cursor: pointer;
+      width: 200px;
+      transition: background-color 0.3s ease;
     }
     .relay-on { background: #28a745; color: white; }
     .relay-off { background: #dc3545; color: white; }
     #mainBtn {
       background: #007bff; color: white; padding: 15px 40px; margin-top: 20px;
       border: none; border-radius: 10px; font-size: 20px; cursor: pointer;
+      width: 220px;
+      transition: background-color 0.3s ease;
+    }
+    #espStatus {
+      margin-top: 15px;
+      font-weight: bold;
+      font-size: 18px;
+      color: #555;
+    }
+    .relays {
+      margin-top: 30px;
     }
   </style>
 </head>
 <body>
   <h1>🚗 ESP32 Car Starter</h1>
+  
   <button id="mainBtn" onclick="startCar()">Start Car</button>
-
+  <div id="espStatus">Connecting...</div>
+  
   <div class="relays">
     <h2>Relay Controls</h2>
     <div id="relays"></div>
