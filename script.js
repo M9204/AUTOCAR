@@ -1,3 +1,4 @@
+// ==== MQTT CONFIG ====
 const client = mqtt.connect("wss://ddf927fd9af44789b245774345c7bf14.s1.eu.hivemq.cloud:8884/mqtt", {
   username: "user9",
   password: "hknnQlRofqnyqj_aQxmeoJ6vPbvK-4fX",
@@ -6,11 +7,13 @@ const client = mqtt.connect("wss://ddf927fd9af44789b245774345c7bf14.s1.eu.hivemq
   clean: true,
 });
 
-const relays = [false, false, false, false]; // initial state
+const relays = [false, false, false, false]; // Local relay states
+let carStarted = false;
 
 // === ESP Status Indicator ===
 const statusDiv = document.getElementById("espStatus");
 
+// ==== MQTT EVENTS ====
 client.on("connect", () => {
   console.log("✅ Connected to HiveMQ");
   client.subscribe("car/#");
@@ -28,7 +31,8 @@ client.on("message", (topic, message) => {
   const msg = message.toString();
   console.log("📩 Message:", topic, msg);
 
-  if (topic.startsWith("car/relay/")) {
+  // ✅ Update relay status from ESP
+  if (topic.startsWith("car/relay/") && topic.endsWith("/state")) {
     const index = parseInt(topic.split("/")[2]);
     if (!isNaN(index) && index >= 0 && index < relays.length) {
       relays[index] = msg === "on";
@@ -36,14 +40,14 @@ client.on("message", (topic, message) => {
     }
   }
 
+  // ✅ Update ESP status
   if (topic === "car/status") {
     statusDiv.innerText = msg.includes("online") ? "ESP Online ✅" : "ESP Offline ❌";
     statusDiv.style.color = msg.includes("online") ? "green" : "red";
   }
 });
 
-let carStarted = false;
-
+// ==== CAR START / STOP SEQUENCE ====
 function startCar() {
   if (!carStarted) {
     carStarted = true;
@@ -58,32 +62,22 @@ function startCar() {
     // 2️⃣ Start sequence
     setTimeout(() => { // ACC ON
       client.publish(`car/relay/0`, "on");
-      relays[0] = true;
-      updateRelayUI(0);
     }, 0);
 
     setTimeout(() => { // IGN ON
       client.publish(`car/relay/1`, "on");
-      relays[1] = true;
-      updateRelayUI(1);
     }, 500);
 
     setTimeout(() => { // START ON
       client.publish(`car/relay/2`, "on");
-      relays[2] = true;
-      updateRelayUI(2);
     }, 1500);
 
     setTimeout(() => { // START OFF (simulate key release)
       client.publish(`car/relay/2`, "off");
-      relays[2] = false;
-      updateRelayUI(2);
     }, 2500);
 
     setTimeout(() => { // AC ON
       client.publish(`car/relay/3`, "on");
-      relays[3] = true;
-      updateRelayUI(3);
     }, 3500);
 
   } else {
@@ -92,35 +86,25 @@ function startCar() {
 
     setTimeout(() => { // AC OFF
       client.publish(`car/relay/3`, "off");
-      relays[3] = false;
-      updateRelayUI(3);
     }, 0);
-
-    setTimeout(() => { // START OFF
-      client.publish(`car/relay/2`, "off");
-      relays[2] = false;
-      updateRelayUI(2);
-    }, 500);
 
     setTimeout(() => { // IGN OFF
       client.publish(`car/relay/1`, "off");
-      relays[1] = false;
-      updateRelayUI(1);
-    }, 1000);
+    }, 500);
 
     setTimeout(() => { // ACC OFF
       client.publish(`car/relay/0`, "off");
-      relays[0] = false;
-      updateRelayUI(0);
-    }, 1500);
+    }, 1000);
   }
 }
 
+// ==== TOGGLE RELAY MANUALLY ====
 function toggleRelay(index) {
   const newState = !relays[index];
   client.publish(`car/relay/${index}`, newState ? "on" : "off");
 }
 
+// ==== UPDATE UI BUTTONS ====
 function updateRelayUI(index) {
   const btn = document.getElementById(`relay${index}`);
   if (btn) {
@@ -129,6 +113,7 @@ function updateRelayUI(index) {
   }
 }
 
+// ==== INIT BUTTONS ====
 window.onload = () => {
   const relayDiv = document.getElementById("relays");
   for (let i = 0; i < relays.length; i++) {
@@ -140,3 +125,4 @@ window.onload = () => {
     relayDiv.appendChild(btn);
   }
 };
+
