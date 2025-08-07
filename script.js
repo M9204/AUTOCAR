@@ -8,12 +8,15 @@ const client = mqtt.connect("wss://ddf927fd9af44789b245774345c7bf14.s1.eu.hivemq
 
 const relays = [false, false, false, false];
 let carStarted = false;
+let espOnline = false;
 
 const statusDiv = document.getElementById("espStatus");
 const mainBtn = document.getElementById("mainBtn");
 
 function updateMainButtonLabel() {
   mainBtn.innerText = carStarted ? "Stop Car" : "Start Car";
+  mainBtn.disabled = !espOnline;
+  mainBtn.style.opacity = espOnline ? 1 : 0.5;
 }
 
 client.on("connect", () => {
@@ -27,6 +30,8 @@ client.on("error", (err) => {
   console.error("❌ MQTT Error:", err);
   statusDiv.innerText = "MQTT Disconnected ❌";
   statusDiv.style.color = "red";
+  espOnline = false;
+  updateMainButtonLabel();
 });
 
 client.on("message", (topic, message) => {
@@ -47,12 +52,28 @@ client.on("message", (topic, message) => {
   }
 
   if (topic === "car/status") {
-    statusDiv.innerText = msg.includes("online") ? "ESP Online ✅" : "ESP Offline ❌";
-    statusDiv.style.color = msg.includes("online") ? "green" : "red";
+    espOnline = msg.includes("online");
+    statusDiv.innerText = espOnline ? "ESP Online ✅" : "ESP Offline ❌";
+    statusDiv.style.color = espOnline ? "green" : "red";
+    updateMainButtonLabel();
+
+    // Optional: Disable relay buttons too
+    for (let i = 0; i < relays.length; i++) {
+      const btn = document.getElementById(`relay${i}`);
+      if (btn) {
+        btn.disabled = !espOnline;
+        btn.style.opacity = espOnline ? 1 : 0.5;
+      }
+    }
   }
 });
 
 function startCar() {
+  if (!espOnline) {
+    alert("ESP is offline. Please wait for it to reconnect.");
+    return;
+  }
+
   if (!carStarted) {
     client.publish("car/start", "start");
   } else {
@@ -61,6 +82,11 @@ function startCar() {
 }
 
 function toggleRelay(index) {
+  if (!espOnline) {
+    alert("ESP is offline. Relay control is unavailable.");
+    return;
+  }
+
   const newState = !relays[index];
   client.publish(`car/relay/${index}`, newState ? "on" : "off");
 }
@@ -75,6 +101,7 @@ function updateRelayUI(index) {
 
 window.onload = () => {
   const relayDiv = document.getElementById("relays");
+
   for (let i = 0; i < relays.length; i++) {
     const btn = document.createElement("button");
     btn.id = `relay${i}`;
@@ -83,5 +110,6 @@ window.onload = () => {
     btn.onclick = () => toggleRelay(i);
     relayDiv.appendChild(btn);
   }
+
   updateMainButtonLabel();
 };
