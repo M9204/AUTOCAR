@@ -32,6 +32,25 @@ client.on("error", (err) => {
 client.on("message", (topic, message) => {
   const msg = message.toString();
   console.log("📩 Message:", topic, msg);
+  
+  client.on("reconnect", () => {
+  console.warn("🔄 Reconnecting...");
+  statusDiv.innerText = "Reconnecting...";
+  statusDiv.style.color = "orange";
+});
+
+client.on("offline", () => {
+  console.warn("📴 MQTT Offline");
+  statusDiv.innerText = "MQTT Offline ❌";
+  statusDiv.style.color = "red";
+});
+
+client.on("close", () => {
+  console.warn("❌ Connection Closed");
+  statusDiv.innerText = "MQTT Disconnected ❌";
+  statusDiv.style.color = "red";
+});
+
 
   if (topic === "car/started") {
     carStarted = (msg === "true");
