@@ -1,34 +1,34 @@
-const express = require("express");
+const express = require('express');
 const app = express();
-const cors = require("cors");
-const path = require("path");
+const port = process.env.PORT || 3000;
 
-// Enable CORS if you want to keep your webpage elsewhere
-app.use(cors());
+let relayStates = {
+  22: true,
+  23: true,
+  24: true,
+  25: true,
+};
 
-// Serve index.html and other static files from 'public' folder
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.json());
+app.use(express.static('public')); // serve index.html and assets from 'public'
 
-let relayStates = ["HIGH", "HIGH", "HIGH", "HIGH"]; // default all high
+// API to get relay states
+app.get('/api/relays', (req, res) => {
+  res.json(relayStates);
+});
 
-app.get("/setRelay", (req, res) => {
-  const relay = parseInt(req.query.relay);
-  const state = req.query.state;
-  if (
-    relay >= 0 &&
-    relay < relayStates.length &&
-    (state === "HIGH" || state === "LOW")
-  ) {
-    relayStates[relay] = state.toUpperCase();
-    res.send("OK");
+// API to toggle a relay by pin number
+app.post('/api/relays/:pin', (req, res) => {
+  const pin = req.params.pin;
+  if (relayStates.hasOwnProperty(pin)) {
+    relayStates[pin] = !relayStates[pin];
+    console.log(`Relay ${pin} toggled to ${relayStates[pin] ? 'ON' : 'OFF'}`);
+    res.json({ success: true, state: relayStates[pin] });
   } else {
-    res.status(400).send("Invalid parameters");
+    res.status(400).json({ error: "Invalid relay pin" });
   }
 });
 
-app.get("/getRelays", (req, res) => {
-  res.send(relayStates.join(","));
+app.listen(port, () => {
+  console.log(`Server listening on port ${port}`);
 });
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server listening on port ${PORT}`));
