@@ -26,7 +26,7 @@
 
   <script>
     function setRelay(index, state) {
-      fetch(`https://autocar-gtpk.onrender.com/setRelay?relay=${index}&state=${state}`)
+      fetch(`/setRelay?relay=${index}&state=${state}`)
         .then(res => res.text())
         .then(console.log);
     }
