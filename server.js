@@ -1,5 +1,11 @@
 const express = require('express');
+const cors = require('cors');
 const app = express();
+
+app.use(cors());  // Allow all origins — or configure it specifically for your frontend
+
+// Your existing routes below
+
 const port = process.env.PORT || 3000;
 
 let relayStates = {
