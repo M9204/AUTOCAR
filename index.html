@@ -1,58 +1,149 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>AutoCar Relay Control</title>
-  <style>
-    body { font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; }
-    .relay { margin: 10px 0; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
-    .on { background-color: #c8f7c5; }
-    .off { background-color: #f7c5c5; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AUTOCAR Relay Control</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #121212;
+    color: #eee;
+    text-align: center;
+    padding: 20px;
+  }
+  h1 {
+    margin-bottom: 0.2em;
+  }
+  .relay-control {
+    margin: 1em auto;
+    max-width: 400px;
+  }
+  button {
+    width: 80px;
+    height: 40px;
+    margin: 5px;
+    font-size: 1em;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+  button.on {
+    background: #28a745;
+    color: white;
+  }
+  button.off {
+    background: #dc3545;
+    color: white;
+  }
+  #status {
+    margin-top: 20px;
+    font-weight: bold;
+  }
+</style>
 </head>
 <body>
-  <h1>AutoCar Relay Status</h1>
-  <div id="relays">
-    <div id="relay0" class="relay">Relay 0: <span class="state">Loading...</span></div>
-    <div id="relay1" class="relay">Relay 1: <span class="state">Loading...</span></div>
-    <div id="relay2" class="relay">Relay 2: <span class="state">Loading...</span></div>
-    <div id="relay3" class="relay">Relay 3: <span class="state">Loading...</span></div>
-  </div>
 
-  <script>
-    async function fetchRelayState() {
-      try {
-        const response = await fetch('relay_state.json', {cache: "no-store"});
-        if (!response.ok) throw new Error('Network response was not ok');
+<h1>AUTOCAR Relay Control</h1>
 
-        const data = await response.json();
+<div class="relay-control" id="relayControl">
+  <!-- Relay buttons will be inserted here -->
+</div>
 
-        for (let i = 0; i < 4; i++) {
-          const relayDiv = document.getElementById('relay' + i);
-          const state = data['relay' + i];
-          if (state) {
-            relayDiv.querySelector('.state').textContent = state.toUpperCase();
-            relayDiv.className = 'relay ' + (state === 'on' ? 'on' : 'off');
-          } else {
-            relayDiv.querySelector('.state').textContent = 'N/A';
-            relayDiv.className = 'relay off';
-          }
-        }
-      } catch (error) {
-        console.error('Failed to fetch relay states:', error);
-        for (let i = 0; i < 4; i++) {
-          const relayDiv = document.getElementById('relay' + i);
-          relayDiv.querySelector('.state').textContent = 'Error';
-          relayDiv.className = 'relay off';
-        }
-      }
+<div id="status">Connecting to MQTT broker...</div>
+
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<script>
+  const mqttHost = 'wss://ddf927fd9af44789b245774345c7bf14.s1.eu.hivemq.cloud:8000/mqtt';
+  const mqttUser = 'user9';
+  const mqttPass = 'hknnQlRofqnyqj_aQxmeoJ6vPbvK-4fX';
+
+  const relayCount = 4;
+  const relayState = new Array(relayCount).fill(false);
+
+  const client = mqtt.connect(mqttHost, {
+    username: mqttUser,
+    password: mqttPass,
+    reconnectPeriod: 5000,
+    connectTimeout: 4000,
+  });
+
+  const statusEl = document.getElementById('status');
+  const relayControlEl = document.getElementById('relayControl');
+
+  function createRelayButtons(index) {
+    const container = document.createElement('div');
+    container.style.marginBottom = '1em';
+
+    const label = document.createElement('span');
+    label.textContent = `Relay ${index}: `;
+    label.style.marginRight = '1em';
+
+    const onBtn = document.createElement('button');
+    onBtn.textContent = 'ON';
+    onBtn.className = 'on';
+    onBtn.onclick = () => toggleRelay(index, true);
+
+    const offBtn = document.createElement('button');
+    offBtn.textContent = 'OFF';
+    offBtn.className = 'off';
+    offBtn.onclick = () => toggleRelay(index, false);
+
+    container.appendChild(label);
+    container.appendChild(onBtn);
+    container.appendChild(offBtn);
+
+    relayControlEl.appendChild(container);
+  }
+
+  function toggleRelay(relayIndex, turnOn) {
+    const topic = `car/relay/${relayIndex}`;
+    const message = turnOn ? 'on' : 'off';
+    if (client.connected) {
+      client.publish(topic, message);
+      console.log(`Published: ${topic} -> ${message}`);
+    } else {
+      console.warn('MQTT not connected');
+      alert('MQTT broker not connected. Try again later.');
     }
+  }
 
-    // Fetch once immediately
-    fetchRelayState();
+  client.on('connect', () => {
+    console.log('Connected to MQTT broker');
+    statusEl.textContent = 'Connected to MQTT broker';
+    // Subscribe to relay states to reflect if needed
+    client.subscribe('car/relay/+/state');
+  });
 
-    // Refresh every 10 seconds
-    setInterval(fetchRelayState, 10000);
-  </script>
+  client.on('reconnect', () => {
+    console.log('Reconnecting to MQTT broker...');
+    statusEl.textContent = 'Reconnecting to MQTT broker...';
+  });
+
+  client.on('error', (err) => {
+    console.error('MQTT Error:', err);
+    statusEl.textContent = 'MQTT Error: ' + err.message;
+  });
+
+  client.on('message', (topic, message) => {
+    console.log(`Message received: ${topic} -> ${message.toString()}`);
+
+    // Example: car/relay/0/state with message 'on' or 'off'
+    const match = topic.match(/^car\/relay\/(\d+)\/state$/);
+    if (match) {
+      const index = parseInt(match[1]);
+      const state = message.toString() === 'on';
+      relayState[index] = state;
+      // Optionally update UI to reflect current relay state
+    }
+  });
+
+  // Create buttons on page load
+  for (let i = 0; i < relayCount; i++) {
+    createRelayButtons(i);
+  }
+</script>
+
 </body>
 </html>
