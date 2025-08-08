@@ -18,9 +18,9 @@
   </div>
 
   <script>
-    const relays = [22, 23, 24, 25];
     const baseURL = "https://autocar-gtpk.onrender.com";
-
+    const relays = [22, 23, 24, 25];
+    
     async function fetchStates() {
       try {
         const res = await fetch(`${baseURL}/api/relays`);
@@ -33,19 +33,18 @@
         console.error('Failed to fetch relay states', e);
       }
     }
-    
+
     async function toggleRelay(pin) {
       try {
         await fetch(`${baseURL}/api/relays/${pin}`, {
           method: 'POST'
         });
-        await fetchStates(); // Update buttons
+        await fetchStates();
       } catch(e) {
         alert('Failed to toggle relay');
       }
     }
 
-    // Refresh every 2 seconds
     setInterval(fetchStates, 2000);
     fetchStates();
   </script>
