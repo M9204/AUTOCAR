@@ -1,149 +1,74 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>AUTOCAR Relay Control</title>
-<style>
-  body {
-    font-family: Arial, sans-serif;
-    background: #121212;
-    color: #eee;
-    text-align: center;
-    padding: 20px;
-  }
-  h1 {
-    margin-bottom: 0.2em;
-  }
-  .relay-control {
-    margin: 1em auto;
-    max-width: 400px;
-  }
-  button {
-    width: 80px;
-    height: 40px;
-    margin: 5px;
-    font-size: 1em;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: background 0.3s;
-  }
-  button.on {
-    background: #28a745;
-    color: white;
-  }
-  button.off {
-    background: #dc3545;
-    color: white;
-  }
-  #status {
-    margin-top: 20px;
-    font-weight: bold;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ESP32 Car Control</title>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #f3f3f3;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      color: #333;
+    }
+    .relay-btn {
+      display: block;
+      margin: 10px auto;
+      padding: 15px 30px;
+      border: none;
+      border-radius: 8px;
+      font-size: 18px;
+      cursor: pointer;
+      width: 200px;
+      transition: background-color 0.3s ease;
+    }
+    .relay-on {
+      background: #28a745;
+      color: white;
+    }
+    .relay-off {
+      background: #dc3545;
+      color: white;
+    }
+    #mainBtn {
+      background: #007bff;
+      color: white;
+      padding: 15px 40px;
+      margin-top: 20px;
+      border: none;
+      border-radius: 10px;
+      font-size: 20px;
+      cursor: pointer;
+      width: 220px;
+      transition: background-color 0.3s ease;
+    }
+    #espStatus {
+      margin-top: 15px;
+      font-weight: bold;
+      font-size: 18px;
+      color: #555;
+    }
+    .relays {
+      margin-top: 30px;
+    }
+  </style>
 </head>
 <body>
+  <h1>🚗 ESP32 Car Starter</h1>
 
-<h1>AUTOCAR Relay Control</h1>
+  <button id="mainBtn" onclick="startCar()">Start Car</button>
+  <div id="espStatus">Connecting...</div>
 
-<div class="relay-control" id="relayControl">
-  <!-- Relay buttons will be inserted here -->
-</div>
+  <div class="relays">
+    <h2>Relay Controls</h2>
+    <div id="relays"></div>
+  </div>
 
-<div id="status">Connecting to MQTT broker...</div>
-
-<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-<script>
-  const mqttHost = 'wss://ddf927fd9af44789b245774345c7bf14.s1.eu.hivemq.cloud:8884/mqtt';
-  const mqttUser = 'user9';
-  const mqttPass = 'hknnQlRofqnyqj_aQxmeoJ6vPbvK-4fX';
-
-  const relayCount = 4;
-  const relayState = new Array(relayCount).fill(false);
-
-  const client = mqtt.connect(mqttHost, {
-    username: mqttUser,
-    password: mqttPass,
-    reconnectPeriod: 5000,
-    connectTimeout: 4000,
-  });
-
-  const statusEl = document.getElementById('status');
-  const relayControlEl = document.getElementById('relayControl');
-
-  function createRelayButtons(index) {
-    const container = document.createElement('div');
-    container.style.marginBottom = '1em';
-
-    const label = document.createElement('span');
-    label.textContent = `Relay ${index}: `;
-    label.style.marginRight = '1em';
-
-    const onBtn = document.createElement('button');
-    onBtn.textContent = 'ON';
-    onBtn.className = 'on';
-    onBtn.onclick = () => toggleRelay(index, true);
-
-    const offBtn = document.createElement('button');
-    offBtn.textContent = 'OFF';
-    offBtn.className = 'off';
-    offBtn.onclick = () => toggleRelay(index, false);
-
-    container.appendChild(label);
-    container.appendChild(onBtn);
-    container.appendChild(offBtn);
-
-    relayControlEl.appendChild(container);
-  }
-
-  function toggleRelay(relayIndex, turnOn) {
-    const topic = `car/relay/${relayIndex}`;
-    const message = turnOn ? 'on' : 'off';
-    if (client.connected) {
-      client.publish(topic, message);
-      console.log(`Published: ${topic} -> ${message}`);
-    } else {
-      console.warn('MQTT not connected');
-      alert('MQTT broker not connected. Try again later.');
-    }
-  }
-
-  client.on('connect', () => {
-    console.log('Connected to MQTT broker');
-    statusEl.textContent = 'Connected to MQTT broker';
-    // Subscribe to relay states to reflect if needed
-    client.subscribe('car/relay/+/state');
-  });
-
-  client.on('reconnect', () => {
-    console.log('Reconnecting to MQTT broker...');
-    statusEl.textContent = 'Reconnecting to MQTT broker...';
-  });
-
-  client.on('error', (err) => {
-    console.error('MQTT Error:', err);
-    statusEl.textContent = 'MQTT Error: ' + err.message;
-  });
-
-  client.on('message', (topic, message) => {
-    console.log(`Message received: ${topic} -> ${message.toString()}`);
-
-    // Example: car/relay/0/state with message 'on' or 'off'
-    const match = topic.match(/^car\/relay\/(\d+)\/state$/);
-    if (match) {
-      const index = parseInt(match[1]);
-      const state = message.toString() === 'on';
-      relayState[index] = state;
-      // Optionally update UI to reflect current relay state
-    }
-  });
-
-  // Create buttons on page load
-  for (let i = 0; i < relayCount; i++) {
-    createRelayButtons(i);
-  }
-</script>
-
+  <script src="script.js"></script>
 </body>
 </html>
