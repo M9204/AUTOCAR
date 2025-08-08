@@ -19,10 +19,11 @@
 
   <script>
     const relays = [22, 23, 24, 25];
-    
+    const baseURL = "https://autocar-gtpk.onrender.com";
+
     async function fetchStates() {
       try {
-        const res = await fetch('/api/relays');
+        const res = await fetch(`${baseURL}/api/relays`);
         const data = await res.json();
         relays.forEach(pin => {
           const btn = document.getElementById('btn' + pin);
@@ -32,10 +33,10 @@
         console.error('Failed to fetch relay states', e);
       }
     }
-
+    
     async function toggleRelay(pin) {
       try {
-        await fetch(`/api/relays/${pin}`, {
+        await fetch(`${baseURL}/api/relays/${pin}`, {
           method: 'POST'
         });
         await fetchStates(); // Update buttons
