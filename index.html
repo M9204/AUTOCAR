@@ -6,19 +6,44 @@
   <title>ESP32 Car Control</title>
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; text-align: center; background: #f3f3f3; margin: 0; padding: 20px; }
-    h1 { color: #333; }
-    .relay-btn { 
-      display: block; margin: 10px auto; padding: 15px 30px; 
-      border: none; border-radius: 8px; font-size: 18px; cursor: pointer;
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #f3f3f3;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      color: #333;
+    }
+    .relay-btn {
+      display: block;
+      margin: 10px auto;
+      padding: 15px 30px;
+      border: none;
+      border-radius: 8px;
+      font-size: 18px;
+      cursor: pointer;
       width: 200px;
       transition: background-color 0.3s ease;
     }
-    .relay-on { background: #28a745; color: white; }
-    .relay-off { background: #dc3545; color: white; }
+    .relay-on {
+      background: #28a745;
+      color: white;
+    }
+    .relay-off {
+      background: #dc3545;
+      color: white;
+    }
     #mainBtn {
-      background: #007bff; color: white; padding: 15px 40px; margin-top: 20px;
-      border: none; border-radius: 10px; font-size: 20px; cursor: pointer;
+      background: #007bff;
+      color: white;
+      padding: 15px 40px;
+      margin-top: 20px;
+      border: none;
+      border-radius: 10px;
+      font-size: 20px;
+      cursor: pointer;
       width: 220px;
       transition: background-color 0.3s ease;
     }
@@ -35,15 +60,104 @@
 </head>
 <body>
   <h1>🚗 ESP32 Car Starter</h1>
-  
+
   <button id="mainBtn" onclick="startCar()">Start Car</button>
   <div id="espStatus">Connecting...</div>
-  
+
   <div class="relays">
     <h2>Relay Controls</h2>
     <div id="relays"></div>
   </div>
 
-  <script src="script.js"></script>
+  <script>
+    // === MQTT Connection ===
+    const client = mqtt.connect("wss://ddf927fd9af44789b245774345c7bf14.s1.eu.hivemq.cloud:8884/mqtt", {
+      username: "user9",
+      password: "hknnQlRofqnyqj_aQxmeoJ6vPbvK-4fX",
+      connectTimeout: 8000,
+      reconnectPeriod: 4000,
+      clean: true,
+    });
+
+    const relays = [false, false, false, false];
+    let carStarted = false;
+
+    const statusDiv = document.getElementById("espStatus");
+    const mainBtn = document.getElementById("mainBtn");
+
+    function updateMainButtonLabel() {
+      mainBtn.innerText = carStarted ? "Stop Car" : "Start Car";
+    }
+
+    client.on("connect", () => {
+      console.log("✅ Connected to HiveMQ");
+      client.subscribe("car/#");
+      statusDiv.innerText = "MQTT Connected ✅";
+      statusDiv.style.color = "green";
+    });
+
+    client.on("error", (err) => {
+      console.error("❌ MQTT Error:", err);
+      statusDiv.innerText = "MQTT Disconnected ❌";
+      statusDiv.style.color = "red";
+    });
+
+    client.on("message", (topic, message) => {
+      const msg = message.toString();
+      console.log("📩 Message:", topic, msg);
+
+      if (topic === "car/started") {
+        carStarted = (msg === "true");
+        updateMainButtonLabel();
+      }
+
+      if (topic.startsWith("car/relay/") && topic.endsWith("/state")) {
+        const index = parseInt(topic.split("/")[2]);
+        if (!isNaN(index) && index >= 0 && index < relays.length) {
+          relays[index] = msg === "on";
+          updateRelayUI(index);
+        }
+      }
+
+      if (topic === "car/status") {
+        statusDiv.innerText = msg.includes("online") ? "ESP Online ✅" : "ESP Offline ❌";
+        statusDiv.style.color = msg.includes("online") ? "green" : "red";
+      }
+    });
+
+    function startCar() {
+      if (!carStarted) {
+        client.publish("car/start", "start");
+      } else {
+        client.publish("car/start", "stop");
+      }
+    }
+
+    function toggleRelay(index) {
+      const newState = !relays[index];
+      client.publish(`car/relay/${index}`, newState ? "on" : "off");
+    }
+
+    function updateRelayUI(index) {
+      const btn = document.getElementById(`relay${index}`);
+      if (btn) {
+        btn.innerText = `Relay ${index}: ${relays[index] ? "ON" : "OFF"}`;
+        btn.className = "relay-btn " + (relays[index] ? "relay-on" : "relay-off");
+      }
+    }
+
+    window.onload = () => {
+      const relayDiv = document.getElementById("relays");
+      for (let i = 0; i < relays.length; i++) {
+        const btn = document.createElement("button");
+        btn.id = `relay${i}`;
+        btn.className = "relay-btn relay-off";
+        btn.innerText = `Relay ${i}: OFF`;
+        btn.onclick = () => toggleRelay(i);
+        relayDiv.appendChild(btn);
+      }
+      updateMainButtonLabel();
+    };
+  </script>
 </body>
 </html>
