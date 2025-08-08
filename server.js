@@ -16,6 +16,23 @@ app.use(express.static('public')); // serve index.html and assets from 'public'
 app.get('/api/relays', (req, res) => {
   res.json(relayStates);
 });
+
+app.get('/setRelay', (req, res) => {
+  const relay = req.query.relay;
+  const state = req.query.state;
+
+  if (!relay || !state) {
+    return res.status(400).send('Missing relay or state');
+  }
+  if (!relayStates.hasOwnProperty(relay)) {
+    return res.status(400).send('Invalid relay pin');
+  }
+
+  relayStates[relay] = (state.toUpperCase() === 'HIGH');
+  console.log(`Relay ${relay} set to ${state.toUpperCase()}`);
+  res.send(`Relay ${relay} set to ${state.toUpperCase()}`);
+});
+
 app.get('/setRelay', (req, res) => {
   const relay = req.query.relay;      // relay pin number as string
   const state = req.query.state;      // "HIGH" or "LOW"
