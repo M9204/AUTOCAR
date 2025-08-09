@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Connected Devices</title>
+  <style>
+    table { border-collapse: collapse; width: 50%; margin-top: 20px;}
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left;}
+    th { background-color: #f4f4f4; }
+  </style>
+</head>
+<body>
+  <h2>Connected Devices (seen within 30 seconds)</h2>
+  <table id="devices-table">
+    <thead>
+      <tr>
+        <th>Device ID</th>
+        <th>Status</th>
+        <th>Last Seen</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+<script>
+  async function fetchDevices() {
+    try {
+      const res = await fetch('/devices');
+      const devices = await res.json();
+      const tbody = document.querySelector('#devices-table tbody');
+      tbody.innerHTML = '';
+
+      const now = new Date();
+      for (const [id, device] of Object.entries(devices)) {
+        const lastSeenDate = new Date(device.lastSeen);
+        const lastSeenStr = lastSeenDate.toLocaleString();
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${id}</td>
+          <td>${device.status} ${device.status === 'online' ? '✅' : ''}</td>
+          <td>${lastSeenStr}</td>
+        `;
+        tbody.appendChild(tr);
+      }
+    } catch (err) {
+      console.error('Error fetching devices:', err);
+    }
+  }
+
+  setInterval(fetchDevices, 5000); // Refresh every 5 seconds
+  fetchDevices();
+</script>
+</body>
+</html>
