@@ -41,6 +41,17 @@ app.get('/', (req, res) => {
   html += `</table></body></html>`;
   res.send(html);
 });
+app.get('/devices', (req, res) => {
+  const now = Date.now();
+  const activeDevices = {};
+  Object.keys(connectedDevices).forEach(id => {
+    if (now - connectedDevices[id].lastSeen.getTime() <= 30000) {
+      let newId = (id.toLowerCase() === 'browser') ? 'Web Client' : id;
+      activeDevices[newId] = connectedDevices[id];
+    }
+  });
+  res.json(activeDevices);
+});
 
 // Endpoint Arduino calls to update status
 app.post('/status', (req, res) => {
