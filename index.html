@@ -1,54 +1,39 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Connected Devices</title>
-  <style>
-    table { border-collapse: collapse; width: 50%; margin-top: 20px;}
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: left;}
-    th { background-color: #f4f4f4; }
-  </style>
+  <meta charset="UTF-8">
+  <title>Relay Control</title>
 </head>
 <body>
-  <h2>Connected Devices (seen within 30 seconds)</h2>
-  <table id="devices-table">
-    <thead>
-      <tr>
-        <th>Device ID</th>
-        <th>Status</th>
-        <th>Last Seen</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+  <h1>Relay Control</h1>
+  <button onclick="sendCmd('R1ON')">Relay 1 ON</button>
+  <button onclick="sendCmd('R1OFF')">Relay 1 OFF</button>
+  <button onclick="sendCmd('R2ON')">Relay 2 ON</button>
+  <button onclick="sendCmd('R2OFF')">Relay 2 OFF</button>
+  <button onclick="sendCmd('R3ON')">Relay 3 ON</button>
+  <button onclick="sendCmd('R3OFF')">Relay 3 OFF</button>
+  <button onclick="sendCmd('R4ON')">Relay 4 ON</button>
+  <button onclick="sendCmd('R4OFF')">Relay 4 OFF</button>
 
-<script>
-  async function fetchDevices() {
-    try {
-      const res = await fetch('/devices');
-      const devices = await res.json();
-      const tbody = document.querySelector('#devices-table tbody');
-      tbody.innerHTML = '';
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <script>
+    const options = {
+      username: "mqtt_user",
+      password: "mqtt_password",
+      protocol: "wss",
+      port: 8884,
+    };
 
-      const now = new Date();
-      for (const [id, device] of Object.entries(devices)) {
-        const lastSeenDate = new Date(device.lastSeen);
-        const lastSeenStr = lastSeenDate.toLocaleString();
+    const client = mqtt.connect("wss://your-id.s1.eu.hivemq.cloud:8884/mqtt", options);
 
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${id}</td>
-          <td>${device.status} ${device.status === 'online' ? '✅' : ''}</td>
-          <td>${lastSeenStr}</td>
-        `;
-        tbody.appendChild(tr);
-      }
-    } catch (err) {
-      console.error('Error fetching devices:', err);
+    client.on("connect", () => {
+      console.log("Connected to MQTT");
+    });
+
+    function sendCmd(cmd) {
+      client.publish("arduino/relays", cmd);
+      console.log("Sent:", cmd);
     }
-  }
-
-  setInterval(fetchDevices, 5000); // Refresh every 5 seconds
-  fetchDevices();
-</script>
+  </script>
 </body>
 </html>
