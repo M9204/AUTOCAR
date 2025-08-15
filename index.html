@@ -2,52 +2,43 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>LED Control via HiveMQ Cloud</title>
-  <script src="https://unpkg.com/paho-mqtt/mqttws31.min.js"></script>
+  <title>LED Control via MQTT</title>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+    button { font-size: 1.5em; padding: 10px 20px; margin: 10px; cursor: pointer; }
+    #status { margin-top: 20px; font-weight: bold; }
+  </style>
 </head>
-<body style="font-family: Arial; text-align: center; margin-top: 50px;">
-  <h2>Arduino LED Control</h2>
-
-  <label>Username: <input type="text" id="username"></label><br><br>
-  <label>Password: <input type="password" id="password"></label><br><br>
-
-  <button onclick="connect()">Connect</button>
-  <hr>
-  <button onclick="sendCommand('ON')">LED ON</button>
-  <button onclick="sendCommand('OFF')">LED OFF</button>
+<body>
+  <h1>LED Control</h1>
+  <button onclick="sendCommand('ON')">ON</button>
+  <button onclick="sendCommand('OFF')">OFF</button>
   <button onclick="sendCommand('TOGGLE')">TOGGLE</button>
+  <div id="status">Connecting to MQTT...</div>
 
   <script>
+    // MQTT broker settings
     const BROKER_URL = "ws://test.mosquitto.org:8080/mqtt";
     const TOPIC = "device/33234323/led";
 
-    let client;
+    // Connect to broker
+    const client = mqtt.connect(BROKER_URL);
 
-    function connect() {
-      const username = document.getElementById("username").value;
-      const password = document.getElementById("password").value;
-      const clientId = "webClient-" + Math.random().toString(16).substr(2, 8);
+    client.on("connect", function () {
+      document.getElementById("status").textContent = "Connected to MQTT broker";
+      console.log("Connected to broker");
+    });
 
-      client = new Paho.MQTT.Client(BROKER_URL, clientId);
-
-      client.connect({
-        useSSL: true,
-        userName: username,
-        password: password,
-        onSuccess: () => alert("Connected to HiveMQ Cloud via WebSocket!"),
-        onFailure: (err) => alert("Connection failed: " + JSON.stringify(err))
-      });
-    }
+    client.on("error", function (err) {
+      document.getElementById("status").textContent = "Connection error: " + err;
+      console.error("Connection error: ", err);
+    });
 
     function sendCommand(cmd) {
-      if (!client || !client.isConnected()) {
-        alert("Not connected!");
-        return;
-      }
-      const message = new Paho.MQTT.Message(cmd);
-      message.destinationName = TOPIC;
-      client.send(message);
+      client.publish(TOPIC, cmd);
       console.log("Sent:", cmd);
+      document.getElementById("status").textContent = `Sent: ${cmd}`;
     }
   </script>
 </body>
