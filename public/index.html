@@ -1,54 +1,52 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Connected Devices</title>
-  <style>
-    table { border-collapse: collapse; width: 50%; margin-top: 20px;}
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: left;}
-    th { background-color: #f4f4f4; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Autocar Relay Control</title>
+<style>
+  body { font-family: Arial; text-align:center; margin-top:50px; }
+  button { width:120px; height:50px; margin:10px; font-size:16px; }
+  .relay { display:inline-block; }
+</style>
 </head>
 <body>
-  <h2>Connected Devices (seen within 30 seconds)</h2>
-  <table id="devices-table">
-    <thead>
-      <tr>
-        <th>Device ID</th>
-        <th>Status</th>
-        <th>Last Seen</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+<h1>Autocar Relay Control</h1>
+
+<div class="relay">
+  <button onclick="sendCommand('R1ON')">R1 ON</button>
+  <button onclick="sendCommand('R1OFF')">R1 OFF</button>
+</div>
+<div class="relay">
+  <button onclick="sendCommand('R2ON')">R2 ON</button>
+  <button onclick="sendCommand('R2OFF')">R2 OFF</button>
+</div>
+<div class="relay">
+  <button onclick="sendCommand('R3ON')">R3 ON</button>
+  <button onclick="sendCommand('R3OFF')">R3 OFF</button>
+</div>
+<div class="relay">
+  <button onclick="sendCommand('R4ON')">R4 ON</button>
+  <button onclick="sendCommand('R4OFF')">R4 OFF</button>
+</div>
 
 <script>
-  async function fetchDevices() {
-    try {
-      const res = await fetch('/devices');
-      const devices = await res.json();
-      const tbody = document.querySelector('#devices-table tbody');
-      tbody.innerHTML = '';
-
-      const now = new Date();
-      for (const [id, device] of Object.entries(devices)) {
-        const lastSeenDate = new Date(device.lastSeen);
-        const lastSeenStr = lastSeenDate.toLocaleString();
-
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${id}</td>
-          <td>${device.status} ${device.status === 'online' ? '✅' : ''}</td>
-          <td>${lastSeenStr}</td>
-        `;
-        tbody.appendChild(tr);
-      }
-    } catch (err) {
-      console.error('Error fetching devices:', err);
+async function sendCommand(cmd) {
+  // For GitHub Pages static site, we can't directly save files
+  // Use this to call an external webhook (Glitch, Render, or your server)
+  // Replace URL below with your backend that updates command.txt
+  const webhook = "https://your-backend-url.com/update?cmd=" + cmd;
+  try {
+    const res = await fetch(webhook);
+    if(res.ok) {
+      alert("Command sent: " + cmd);
+    } else {
+      alert("Failed to send command: " + cmd);
     }
+  } catch(e) {
+    alert("Error: " + e.message);
   }
-
-  setInterval(fetchDevices, 5000); // Refresh every 5 seconds
-  fetchDevices();
+}
 </script>
 </body>
 </html>
