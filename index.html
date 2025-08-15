@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Arduino Control</title>
+  <title>Arduino Relay Control</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
     body { font-family: system-ui, Arial; max-width:720px; margin:2rem auto; padding:1rem; }
@@ -20,117 +20,23 @@
   <p id="statusLine">Connecting to MQTT...</p>
 
   <div id="controls">
-    <div class="relay">
-      <span id="dot1" class="dot off"></span>
-      <strong>Relay 1</strong>
-      <button id="btn1" class="btn off" onclick="toggle(1)">Toggle</button>
-    </div>
-    <div class="relay">
-      <span id="dot2" class="dot off"></span>
-      <strong>Relay 2</strong>
-      <button id="btn2" class="btn off" onclick="toggle(2)">Toggle</button>
-    </div>
-    <div class="relay">
-      <span id="dot3" class="dot off"></span>
-      <strong>Relay 3</strong>
-      <button id="btn3" class="btn off" onclick="toggle(3)">Toggle</button>
-    </div>
-    <div class="relay">
-      <span id="dot4" class="dot off"></span>
-      <strong>Relay 4</strong>
-      <button id="btn4" class="btn off" onclick="toggle(4)">Toggle</button>
-    </div>
+    <div class="relay"><span id="dot1" class="dot off"></span><strong>Relay 1</strong><button id="btn1" class="btn off" onclick="toggle(1)">Toggle</button></div>
+    <div class="relay"><span id="dot2" class="dot off"></span><strong>Relay 2</strong><button id="btn2" class="btn off" onclick="toggle(2)">Toggle</button></div>
+    <div class="relay"><span id="dot3" class="dot off"></span><strong>Relay 3</strong><button id="btn3" class="btn off" onclick="toggle(3)">Toggle</button></div>
+    <div class="relay"><span id="dot4" class="dot off"></span><strong>Relay 4</strong><button id="btn4" class="btn off" onclick="toggle(4)">Toggle</button></div>
   </div>
 
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <script>
-    // HiveMQ WebSocket endpoint + credentials (you already provided these)
     const WS_URL = "wss://ddf927fd9af44789b245774345c7bf14.s1.eu.hivemq.cloud:8884/mqtt";
-    const options = {
-      username: "user9",
-      password: "hknnQlRofqnyqj_aQxmeoJ6vPbvK-4fX",
-      reconnectPeriod: 4000,
-      connectTimeout: 30 * 1000,
-    };
-
+    const options = { username: "user9", password: "hknnQlRofqnyqj_aQxmeoJ6vPbvK-4fX", reconnectPeriod: 4000, connectTimeout: 30000 };
     const topicSub = "arduino/status";
     const topicCmd = "arduino/relays";
-
     const client = mqtt.connect(WS_URL, options);
 
     let currentState = { r1:1, r2:1, r3:1, r4:1 };
 
     client.on("connect", () => {
       document.getElementById("statusLine").innerText = "Connected to MQTT";
-      client.subscribe(topicSub, (err) => {
-        if (!err) {
-          console.log("Subscribed to", topicSub);
-        } else {
-          console.error("Subscribe error", err);
-        }
-      });
+      client.subscribe(topicSub, (err) => { if(err) console.error(err); });
     });
-
-    client.on("reconnect", () => {
-      document.getElementById("statusLine").innerText = "Reconnecting...";
-    });
-
-    client.on("error", (e) => {
-      document.getElementById("statusLine").innerText = "MQTT Error: " + e;
-      console.error(e);
-    });
-
-    client.on("message", (topic, payload) => {
-      if (topic === topicSub) {
-        try {
-          const obj = JSON.parse(payload.toString());
-          // Expect keys r1..r4 where 0=ON,1=OFF
-          for (let i=1;i<=4;i++) {
-            const key = 'r' + i;
-            if (obj.hasOwnProperty(key)) {
-              currentState[key] = obj[key];
-              updateUI(i, obj[key]);
-            }
-          }
-        } catch (err) {
-          console.error("Bad status payload:", payload.toString());
-        }
-      }
-    });
-
-    function updateUI(i, val) {
-      const dot = document.getElementById('dot' + i);
-      const btn = document.getElementById('btn' + i);
-      if (val === 0) {
-        dot.classList.remove('off'); dot.classList.add('on');
-        btn.classList.remove('off'); btn.classList.add('on');
-        btn.innerText = 'Turn OFF';
-      } else {
-        dot.classList.remove('on'); dot.classList.add('off');
-        btn.classList.remove('on'); btn.classList.add('off');
-        btn.innerText = 'Turn ON';
-      }
-    }
-
-    // send command R1ON / R1OFF etc.
-    function sendCmd(cmd) {
-      if (client.connected) {
-        client.publish(topicCmd, cmd);
-      } else {
-        alert("MQTT not connected");
-      }
-    }
-
-    // toggle logic: if currently ON (0) => send OFF; if OFF (1) => send ON
-    function toggle(i) {
-      const key = 'r' + i;
-      const val = currentState[key];
-      if (val === 0) {
-        sendCmd('R' + i + 'OFF');
-      } else {
-        sendCmd('R' + i + 'ON');
-      }
-    }
-  </script>
-</body>
-</html>
