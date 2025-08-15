@@ -1,42 +1,52 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>Arduino Relay Control</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <style>
-    body { font-family: system-ui, Arial; max-width:720px; margin:2rem auto; padding:1rem; }
-    .relay { display:flex; align-items:center; gap:12px; margin:12px 0; }
-    .btn { padding:8px 12px; border-radius:6px; border:1px solid #444; cursor:pointer; }
-    .on { background:#22c55e; color:#fff; }
-    .off { background:#e2e8f0; color:#111; }
-    .dot { width:14px; height:14px; border-radius:50%; display:inline-block; margin-right:8px; border:1px solid #333; }
-    .dot.on { background:#22c55e; }
-    .dot.off { background:#ef4444; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Autocar Relay Control</title>
+<style>
+  body { font-family: Arial; text-align:center; margin-top:50px; }
+  button { width:120px; height:50px; margin:10px; font-size:16px; }
+  .relay { display:inline-block; }
+</style>
 </head>
 <body>
-  <h1>Relay </h1>
-  <p id="statusLine">Connecting to MQTT...</p>
+<h1>Autocar Relay Control</h1>
 
-  <div id="controls">
-    <div class="relay"><span id="dot1" class="dot off"></span><strong>Relay 1</strong><button id="btn1" class="btn off" onclick="toggle(1)">Toggle</button></div>
-    <div class="relay"><span id="dot2" class="dot off"></span><strong>Relay 2</strong><button id="btn2" class="btn off" onclick="toggle(2)">Toggle</button></div>
-    <div class="relay"><span id="dot3" class="dot off"></span><strong>Relay 3</strong><button id="btn3" class="btn off" onclick="toggle(3)">Toggle</button></div>
-    <div class="relay"><span id="dot4" class="dot off"></span><strong>Relay 4</strong><button id="btn4" class="btn off" onclick="toggle(4)">Toggle</button></div>
-  </div>
+<div class="relay">
+  <button onclick="sendCommand('R1ON')">R1 ON</button>
+  <button onclick="sendCommand('R1OFF')">R1 OFF</button>
+</div>
+<div class="relay">
+  <button onclick="sendCommand('R2ON')">R2 ON</button>
+  <button onclick="sendCommand('R2OFF')">R2 OFF</button>
+</div>
+<div class="relay">
+  <button onclick="sendCommand('R3ON')">R3 ON</button>
+  <button onclick="sendCommand('R3OFF')">R3 OFF</button>
+</div>
+<div class="relay">
+  <button onclick="sendCommand('R4ON')">R4 ON</button>
+  <button onclick="sendCommand('R4OFF')">R4 OFF</button>
+</div>
 
-  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-  <script>
-    const WS_URL = "wss://ddf927fd9af44789b245774345c7bf14.s1.eu.hivemq.cloud:8884/mqtt";
-    const options = { username: "user9", password: "hknnQlRofqnyqj_aQxmeoJ6vPbvK-4fX", reconnectPeriod: 4000, connectTimeout: 30000 };
-    const topicSub = "arduino/status";
-    const topicCmd = "arduino/relays";
-    const client = mqtt.connect(WS_URL, options);
-
-    let currentState = { r1:1, r2:1, r3:1, r4:1 };
-
-    client.on("connect", () => {
-      document.getElementById("statusLine").innerText = "Connected to MQTT";
-      client.subscribe(topicSub, (err) => { if(err) console.error(err); });
-    });
+<script>
+async function sendCommand(cmd) {
+  // For GitHub Pages static site, we can't directly save files
+  // Use this to call an external webhook (Glitch, Render, or your server)
+  // Replace URL below with your backend that updates command.txt
+  const webhook = "https://your-backend-url.com/update?cmd=" + cmd;
+  try {
+    const res = await fetch(webhook);
+    if(res.ok) {
+      alert("Command sent: " + cmd);
+    } else {
+      alert("Failed to send command: " + cmd);
+    }
+  } catch(e) {
+    alert("Error: " + e.message);
+  }
+}
+</script>
+</body>
+</html>
