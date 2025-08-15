@@ -1,52 +1,54 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Autocar Relay Control</title>
-<style>
-  body { font-family: Arial; text-align:center; margin-top:50px; }
-  button { width:120px; height:50px; margin:10px; font-size:16px; }
-  .relay { display:inline-block; }
-</style>
+  <meta charset="UTF-8">
+  <title>LED Control via HiveMQ Cloud</title>
+  <script src="https://unpkg.com/paho-mqtt/mqttws31.min.js"></script>
 </head>
-<body>
-<h1>Autocar Relay Control</h1>
+<body style="font-family: Arial; text-align: center; margin-top: 50px;">
+  <h2>Arduino LED Control</h2>
 
-<div class="relay">
-  <button onclick="sendCommand('R1ON')">R1 ON</button>
-  <button onclick="sendCommand('R1OFF')">R1 OFF</button>
-</div>
-<div class="relay">
-  <button onclick="sendCommand('R2ON')">R2 ON</button>
-  <button onclick="sendCommand('R2OFF')">R2 OFF</button>
-</div>
-<div class="relay">
-  <button onclick="sendCommand('R3ON')">R3 ON</button>
-  <button onclick="sendCommand('R3OFF')">R3 OFF</button>
-</div>
-<div class="relay">
-  <button onclick="sendCommand('R4ON')">R4 ON</button>
-  <button onclick="sendCommand('R4OFF')">R4 OFF</button>
-</div>
+  <label>Username: <input type="text" id="username"></label><br><br>
+  <label>Password: <input type="password" id="password"></label><br><br>
 
-<script>
-async function sendCommand(cmd) {
-  // For GitHub Pages static site, we can't directly save files
-  // Use this to call an external webhook (Glitch, Render, or your server)
-  // Replace URL below with your backend that updates command.txt
-  const webhook = "https://your-backend-url.com/update?cmd=" + cmd;
-  try {
-    const res = await fetch(webhook);
-    if(res.ok) {
-      alert("Command sent: " + cmd);
-    } else {
-      alert("Failed to send command: " + cmd);
+  <button onclick="connect()">Connect</button>
+  <hr>
+  <button onclick="sendCommand('ON')">LED ON</button>
+  <button onclick="sendCommand('OFF')">LED OFF</button>
+  <button onclick="sendCommand('TOGGLE')">TOGGLE</button>
+
+  <script>
+    const BROKER_URL = "ws://test.mosquitto.org:8080/mqtt";
+    const TOPIC = "device/33234323/led";
+
+    let client;
+
+    function connect() {
+      const username = document.getElementById("username").value;
+      const password = document.getElementById("password").value;
+      const clientId = "webClient-" + Math.random().toString(16).substr(2, 8);
+
+      client = new Paho.MQTT.Client(BROKER_URL, clientId);
+
+      client.connect({
+        useSSL: true,
+        userName: username,
+        password: password,
+        onSuccess: () => alert("Connected to HiveMQ Cloud via WebSocket!"),
+        onFailure: (err) => alert("Connection failed: " + JSON.stringify(err))
+      });
     }
-  } catch(e) {
-    alert("Error: " + e.message);
-  }
-}
-</script>
+
+    function sendCommand(cmd) {
+      if (!client || !client.isConnected()) {
+        alert("Not connected!");
+        return;
+      }
+      const message = new Paho.MQTT.Message(cmd);
+      message.destinationName = TOPIC;
+      client.send(message);
+      console.log("Sent:", cmd);
+    }
+  </script>
 </body>
 </html>
