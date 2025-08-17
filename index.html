@@ -3,285 +3,171 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ESP32 Car — MQTT Control Panel</title>
+  <title>ESP32 Car Control</title>
 
   <style>
-    :root{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;}
-    body{margin:0;background:#f5f7fb;color:#111;display:flex;align-items:flex-start;justify-content:center;padding:24px;}
-    .card{width:960px;max-width:95%;background:#fff;border-radius:12px;box-shadow:0 6px 24px rgba(20,30,60,0.08);padding:18px;gap:14px;display:flex;flex-direction:column}
-    header{display:flex;align-items:center;justify-content:space-between;gap:12px}
-    h1{font-size:18px;margin:0}
-    .controls{display:flex;gap:14px;flex-wrap:wrap}
-    .panel{flex:1;min-width:260px;background:#fbfdff;border-radius:10px;padding:12px;box-shadow:inset 0 1px 0 rgba(0,0,0,0.02)}
-    .relays{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
-    .relay{display:flex;align-items:center;justify-content:space-between;padding:10px;border-radius:8px;background:#fff;border:1px solid #eef2f7}
-    .relay button{padding:8px 12px;border-radius:8px;border:0;background:#0b74ff;color:#fff;cursor:pointer}
-    .relay button.off{background:#d1d7e6;color:#1b2433}
-    .startstop{display:flex;gap:8px}
-    .startstop button{padding:10px 14px;border-radius:10px;border:0;cursor:pointer}
-    .start{background:#16a34a;color:#fff}
-    .stop{background:#ef4444;color:#fff}
-    .statusline{display:flex;gap:8px;align-items:center;margin-top:8px}
-    .dot{width:10px;height:10px;border-radius:50%}
-    .dot.off{background:#bbb}
-    .dot.on{background:#16a34a}
-    .log{height:200px;overflow:auto;background:#0b1220;color:#e6f2ff;padding:10px;border-radius:8px;font-family:monospace;font-size:13px}
-    .field{display:flex;gap:8px;align-items:center}
-    input[type=text], input[type=password] {padding:8px;border-radius:8px;border:1px solid #dfe7f5}
-    footer{font-size:12px;color:#5b6b82}
-    @media(max-width:700px){.relays{grid-template-columns:1fr}}
+    :root { font-family: system-ui, -apple-system, Roboto, sans-serif; }
+    body { margin:0; background:#f5f7fb; color:#111; }
+    .card {
+      max-width: 480px; margin:auto; padding:16px;
+      background:#fff; border-radius:12px;
+      box-shadow:0 6px 18px rgba(0,0,0,0.08);
+    }
+    h1 { font-size:20px; margin:0 0 8px; text-align:center; }
+    h3 { margin:8px 0; font-size:16px; }
+    .section { margin:16px 0; }
+    .statusline { display:flex; align-items:center; gap:8px; font-size:14px; }
+    .dot { width:12px; height:12px; border-radius:50%; }
+    .dot.on { background:#16a34a; }
+    .dot.off { background:#bbb; }
+    button {
+      width:100%; padding:14px; margin:6px 0;
+      border:none; border-radius:10px;
+      font-size:16px; font-weight:500;
+      cursor:pointer; transition:0.2s;
+    }
+    button:active { transform:scale(0.98); }
+    .start { background:#16a34a; color:#fff; }
+    .stop { background:#ef4444; color:#fff; }
+    .relay-btn {
+      background:#e5e7eb; color:#111;
+    }
+    .relay-btn.on { background:#0b74ff; color:#fff; }
+    .field input {
+      width:100%; padding:10px; margin:6px 0;
+      border:1px solid #ccc; border-radius:8px;
+      font-size:14px;
+    }
+    .log {
+      height:150px; overflow:auto;
+      background:#0b1220; color:#e6f2ff;
+      padding:10px; border-radius:8px;
+      font-family:monospace; font-size:12px;
+    }
+    footer { margin-top:12px; text-align:center; font-size:12px; color:#666; }
   </style>
 </head>
 <body>
   <div class="card">
-    <header>
-      <div>
-        <h1>ESP32 Car — MQTT Control Panel</h1>
-        <div style="font-size:13px;color:#556074">Connects to HiveMQ Cloud (wss). Subscribes to <code>car/#</code></div>
-      </div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <div class="field">
-          <input id="host" type="text" value="ddf927fd9af44789b245774345c7bf14.s1.eu.hivemq.cloud" />
-        </div>
-        <div class="field">
-          <input id="wsport" type="text" value="8884" style="width:72px" />
-        </div>
-        <div class="field">
-          <input id="user" type="text" value="user9" style="width:120px" />
-          <input id="pass" type="password" value="hknnQlRofqnyqj_aQxmeoJ6vPbvK-4fX" style="width:240px" />
-        </div>
-        <button id="connectBtn">Connect</button>
-      </div>
-    </header>
+    <h1>🚗 ESP32 Car Control</h1>
 
-    <div class="controls">
-      <div class="panel">
-        <h3>Car Control</h3>
-        <div class="startstop" style="margin-top:8px">
-          <button id="startBtn" class="start">START SEQUENCE</button>
-          <button id="stopBtn" class="stop">STOP SEQUENCE</button>
-        </div>
-
-        <div style="margin-top:12px">
-          <strong>Car started:</strong>
-          <span id="carStarted" style="margin-left:8px">unknown</span>
-          <div class="statusline">
-            <div id="carDot" class="dot off"></div>
-            <div id="carStatusText" style="color:#546177">waiting for status...</div>
-          </div>
-        </div>
-
-        <hr style="margin:12px 0">
-
-        <h4>Relays</h4>
-        <div class="relays" id="relaysContainer">
-          <!-- Relay buttons inserted by JS -->
-        </div>
-      </div>
-
-      <div class="panel">
-        <h3>Connection & Log</h3>
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-          <div><strong>MQTT:</strong></div>
-          <div id="connState">disconnected</div>
-        </div>
-
-        <div class="log" id="log"></div>
-        <div style="margin-top:8px;display:flex;gap:8px">
-          <button id="clearLog">Clear Log</button>
-          <button id="subscribeAll">Subscribe car/#</button>
-        </div>
-      </div>
+    <div class="section">
+      <h3>Connection</h3>
+      <div class="field"><input id="host" type="text" value="ddf927fd9af44789b245774345c7bf14.s1.eu.hivemq.cloud" /></div>
+      <div class="field"><input id="wsport" type="text" value="8884" /></div>
+      <div class="field"><input id="user" type="text" value="user9" /></div>
+      <div class="field"><input id="pass" type="password" value="hknnQlRofqnyqj_aQxmeoJ6vPbvK-4fX" /></div>
+      <button id="connectBtn">Connect</button>
+      <div class="statusline"><div id="connDot" class="dot off"></div><span id="connState">Disconnected</span></div>
     </div>
 
-    <footer>
-      Tip: If connecting fails, check that your HiveMQ cluster allows WebSocket (TLS) and that the WebSocket port (8884) is correct for your cluster.
-    </footer>
+    <div class="section">
+      <h3>Car Start/Stop</h3>
+      <button id="startBtn" class="start">START 🚀</button>
+      <button id="stopBtn" class="stop">STOP ⛔</button>
+      <div class="statusline"><div id="carDot" class="dot off"></div><span id="carStatusText">Waiting...</span></div>
+    </div>
+
+    <div class="section">
+      <h3>Relays</h3>
+      <div id="relaysContainer"></div>
+    </div>
+
+    <div class="section">
+      <h3>Log</h3>
+      <div class="log" id="log"></div>
+      <button id="clearLog">Clear Log</button>
+    </div>
+
+    <footer>ESP32 MQTT Web Control • Mobile Layout</footer>
   </div>
 
-  <!-- mqtt.js from CDN -->
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <script>
-    // UI refs
-    const connectBtn = document.getElementById('connectBtn');
-    const connState = document.getElementById('connState');
-    const logEl = document.getElementById('log');
-    const clearLogBtn = document.getElementById('clearLog');
-    const subscribeAllBtn = document.getElementById('subscribeAll');
-    const startBtn = document.getElementById('startBtn');
-    const stopBtn = document.getElementById('stopBtn');
-    const relaysContainer = document.getElementById('relaysContainer');
-    const carStartedText = document.getElementById('carStarted');
-    const carDot = document.getElementById('carDot');
-    const carStatusText = document.getElementById('carStatusText');
-
-    // Default 4 relays - update if your pin count differs
     const NUM_RELAYS = 4;
-    const relayState = Array(NUM_RELAYS).fill(false);
+    let relayState = Array(NUM_RELAYS).fill(false);
+    let client = null;
 
-    // Build relay controls
-    function buildRelays() {
-      relaysContainer.innerHTML = '';
-      for (let i = 0; i < NUM_RELAYS; i++) {
-        const wrap = document.createElement('div');
-        wrap.className = 'relay';
-        const label = document.createElement('div');
-        label.innerText = `Relay ${i}`;
-        const btn = document.createElement('button');
-        btn.id = `relayBtn${i}`;
-        btn.className = 'off';
-        btn.innerText = 'OFF';
-        btn.onclick = () => toggleRelay(i);
-        wrap.appendChild(label);
-        wrap.appendChild(btn);
-        relaysContainer.appendChild(wrap);
-      }
-    }
-
-    buildRelays();
-
-    // logging helper
+    const logEl = document.getElementById("log");
     function log(msg) {
       const t = new Date().toLocaleTimeString();
       logEl.innerText = `[${t}] ${msg}\n` + logEl.innerText;
     }
 
-    clearLogBtn.onclick = () => logEl.innerText = '';
-
-    subscribeAllBtn.onclick = () => {
-      if (client && client.connected) {
-        client.subscribe('car/#', { qos: 1 });
-        log('Subscribed to car/#');
-      } else log('Not connected');
-    };
-
-    // MQTT client var
-    let client = null;
-
-    connectBtn.onclick = () => {
-      if (client && client.connected) {
-        client.end(true);
-        connectBtn.innerText = 'Connect';
-        connState.innerText = 'disconnected';
-        log('Disconnected');
-        return;
+    function buildRelays() {
+      const c = document.getElementById("relaysContainer");
+      c.innerHTML = "";
+      for (let i=0;i<NUM_RELAYS;i++) {
+        const btn = document.createElement("button");
+        btn.className = "relay-btn";
+        btn.id = "relayBtn"+i;
+        btn.innerText = `Relay ${i}: OFF`;
+        btn.onclick = ()=> toggleRelay(i);
+        c.appendChild(btn);
       }
-      connect();
-    };
+    }
+    buildRelays();
 
-    function connect() {
-      const host = document.getElementById('host').value.trim();
-      const port = document.getElementById('wsport').value.trim() || '8884';
-      const username = document.getElementById('user').value.trim();
-      const password = document.getElementById('pass').value;
-
-      const url = `wss://${host}:${port}/mqtt`;
-      log(`Connecting to ${url} as ${username} ...`);
-      connState.innerText = 'connecting...';
-
-      const options = {
-        username,
-        password,
-        keepalive: 30,
-        reconnectPeriod: 3000,
-        connectTimeout: 10 * 1000,
-        clientId: 'web_control_' + Math.random().toString(16).substr(2, 8),
-      };
-
-      client = mqtt.connect(url, options);
-
-      client.on('connect', () => {
-        log('MQTT connected');
-        connectBtn.innerText = 'Disconnect';
-        connState.innerText = 'connected';
-        client.subscribe('car/#', { qos: 1 }, (err) => {
-          if (!err) log('Subscribed to car/#');
-        });
-        // request states if your firmware publishes retained values; otherwise wait for updates
-      });
-
-      client.on('reconnect', () => {
-        connState.innerText = 'reconnecting...';
-        log('Reconnecting...');
-      });
-
-      client.on('close', () => {
-        connState.innerText = 'disconnected';
-        connectBtn.innerText = 'Connect';
-        log('Connection closed');
-      });
-
-      client.on('error', (err) => {
-        log('Error: ' + (err && err.message ? err.message : err));
-      });
-
-      client.on('message', (topic, payload) => {
-        const msg = (payload || '').toString();
-        log(`IN  [${topic}] => ${msg}`);
-        handleIncoming(topic, msg);
-      });
+    function setRelayUi(i, on) {
+      relayState[i]=on;
+      const b=document.getElementById("relayBtn"+i);
+      if(!b) return;
+      b.classList.toggle("on",on);
+      b.innerText=`Relay ${i}: ${on?"ON":"OFF"}`;
     }
 
-    // handle messages from device
-    function handleIncoming(topic, msg) {
-      if (topic === 'car/started') {
-        const on = (msg === 'true' || msg === '1' || msg === 'on');
-        carStartedText.innerText = on ? 'YES' : 'NO';
-        carDot.className = 'dot ' + (on ? 'on' : 'off');
-        carStatusText.innerText = on ? 'Car reports started' : 'Car reports stopped';
-      } else if (topic.startsWith('car/relay/') && topic.endsWith('/state')) {
-        // format: car/relay/0/state
-        const parts = topic.split('/');
-        const idx = parseInt(parts[2], 10);
-        if (!isNaN(idx) && idx >= 0 && idx < NUM_RELAYS) {
-          const on = (msg === 'on' || msg === '1');
-          setRelayUi(idx, on);
-        }
-      } else if (topic === 'car/status') {
-        log('Status: ' + msg);
+    function toggleRelay(i) {
+      if(!client||!client.connected) { log("Not connected"); return; }
+      const newState=!relayState[i];
+      client.publish(`car/relay/${i}`, newState?"on":"off");
+      log(`OUT car/relay/${i} => ${newState?"on":"off"}`);
+      setRelayUi(i,newState);
+    }
+
+    function handleIncoming(topic,msg){
+      if(topic==="car/started"){
+        const on=(msg==="true"||msg==="on");
+        document.getElementById("carDot").className="dot "+(on?"on":"off");
+        document.getElementById("carStatusText").innerText=on?"Car Started":"Car Stopped";
+      }
+      else if(topic.startsWith("car/relay/") && topic.endsWith("/state")){
+        const idx=parseInt(topic.split("/")[2],10);
+        setRelayUi(idx,msg==="on");
       }
     }
 
-    function setRelayUi(index, on) {
-      relayState[index] = !!on;
-      const btn = document.getElementById('relayBtn' + index);
-      if (!btn) return;
-      btn.innerText = on ? 'ON' : 'OFF';
-      if (on) { btn.classList.remove('off'); } else { btn.classList.add('off'); }
-    }
+    document.getElementById("startBtn").onclick=()=>{
+      client?.publish("car/start","start");
+      log("OUT car/start => start");
+    };
+    document.getElementById("stopBtn").onclick=()=>{
+      client?.publish("car/start","stop");
+      log("OUT car/start => stop");
+    };
+    document.getElementById("clearLog").onclick=()=> logEl.innerText="";
 
-    // toggle from UI -> send MQTT
-    function toggleRelay(index) {
-      if (!client || !client.connected) { log('Not connected'); return; }
-      const newState = !relayState[index];
-      const topic = `car/relay/${index}`;
-      const payload = newState ? 'on' : 'off';
-      client.publish(topic, payload, { qos: 1, retain: false }, (err) => {
-        if (err) log(`Publish error: ${err}`);
-        else log(`OUT [${topic}] => ${payload}`);
-        // Optimistically update UI (device will also publish its state)
-        setRelayUi(index, newState);
+    document.getElementById("connectBtn").onclick=()=>{
+      if(client && client.connected){ client.end(true); return; }
+      const host=document.getElementById("host").value.trim();
+      const port=document.getElementById("wsport").value.trim();
+      const user=document.getElementById("user").value.trim();
+      const pass=document.getElementById("pass").value;
+      const url=`wss://${host}:${port}/mqtt`;
+      log(`Connecting to ${url}`);
+      client=mqtt.connect(url,{username:user,password:pass,clientId:"web_"+Math.random().toString(16).slice(2)});
+      client.on("connect",()=>{
+        log("Connected ✅");
+        document.getElementById("connState").innerText="Connected";
+        document.getElementById("connDot").className="dot on";
+        client.subscribe("car/#");
       });
-    }
-
-    // Start / Stop sequence (send start/stop commands)
-    startBtn.onclick = () => {
-      if (!client || !client.connected) { log('Not connected'); return; }
-      client.publish('car/start', 'start', { qos: 1 }, (err) => {
-        if (err) log('Start publish error');
-        else log('OUT [car/start] => start');
+      client.on("message",(t,p)=>handleIncoming(t,p.toString()));
+      client.on("close",()=>{
+        document.getElementById("connState").innerText="Disconnected";
+        document.getElementById("connDot").className="dot off";
+        log("Disconnected");
       });
     };
-    stopBtn.onclick = () => {
-      if (!client || !client.connected) { log('Not connected'); return; }
-      client.publish('car/start', 'stop', { qos: 1 }, (err) => {
-        if (err) log('Stop publish error');
-        else log('OUT [car/start] => stop');
-      });
-    };
-
-    // initialize UI with OFF buttons
-    for (let i=0;i<NUM_RELAYS;i++) setRelayUi(i, false);
   </script>
 </body>
 </html>
