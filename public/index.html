@@ -2,52 +2,82 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>LED Control via HiveMQ Cloud</title>
+  <title>ESP32 Car Control</title>
   <script src="https://unpkg.com/paho-mqtt/mqttws31.min.js"></script>
 </head>
-<body style="font-family: Arial; text-align: center; margin-top: 50px;">
-  <h2>Arduino LED Control</h2>
 
-  <label>Username: <input type="text" id="username"></label><br><br>
-  <label>Password: <input type="password" id="password"></label><br><br>
+<body style="font-family: Arial; text-align: center; margin-top: 40px;">
+  <h2>🚗 ESP32 Car Control Panel</h2>
 
-  <button onclick="connect()">Connect</button>
+  <button onclick="connect()">🔌 Connect</button>
+  <p id="status">Disconnected</p>
+
   <hr>
-  <button onclick="sendCommand('ON')">LED ON</button>
-  <button onclick="sendCommand('OFF')">LED OFF</button>
-  <button onclick="sendCommand('TOGGLE')">TOGGLE</button>
+
+  <h3>Engine</h3>
+  <button onclick="publish('car/start','start')">▶️ Start Car</button>
+  <button onclick="publish('car/start','stop')">⏹ Stop Car</button>
+
+  <hr>
+
+  <h3>Doors</h3>
+  <button onclick="publish('car/door/lock','on')">🔒 Lock</button>
+  <button onclick="publish('car/door/unlock','on')">🔓 Unlock</button>
+
+  <hr>
+
+  <h3>Manual Relays</h3>
+  <button onclick="publish('car/relay/0','on')">ACC ON</button>
+  <button onclick="publish('car/relay/0','off')">ACC OFF</button><br><br>
+
+  <button onclick="publish('car/relay/1','on')">IGN1 ON</button>
+  <button onclick="publish('car/relay/1','off')">IGN1 OFF</button><br><br>
+
+  <button onclick="publish('car/relay/2','on')">IGN2 ON</button>
+  <button onclick="publish('car/relay/2','off')">IGN2 OFF</button><br><br>
+
+  <button onclick="publish('car/relay/3','on')">START ON</button>
+  <button onclick="publish('car/relay/3','off')">START OFF</button>
 
   <script>
-    const BROKER_URL = "wss://1dfeeed9e85a447aad62e4ba9dab73dc.s1.eu.hivemq.cloud:8884/mqtt";
-    const TOPIC = "device/33234323/led";
+    const BROKER = "wss://ddf927fd9af44789b245774345c7bf14.s1.eu.hivemq.cloud:8884/mqtt";
+    const USERNAME = "user9";
+    const PASSWORD = "hknnQlRofqnyqj_aQxmeoJ6vPbvK-4fX";
 
     let client;
 
     function connect() {
-      const username = document.getElementById("username").value;
-      const password = document.getElementById("password").value;
-      const clientId = "webClient-" + Math.random().toString(16).substr(2, 8);
+      const clientId = "web-" + Math.random().toString(16).substr(2, 8);
+      client = new Paho.MQTT.Client(BROKER, clientId);
 
-      client = new Paho.MQTT.Client(BROKER_URL, clientId);
+      client.onConnectionLost = () => {
+        document.getElementById("status").innerText = "❌ Disconnected";
+      };
 
       client.connect({
         useSSL: true,
-        userName: "user9",
-        password: "hknnQlRofqnyqj_aQxmeoJ6vPbvK-4fX",
-        onSuccess: () => alert("Connected to HiveMQ Cloud via WebSocket!"),
-        onFailure: (err) => alert("Connection failed: " + JSON.stringify(err))
+        userName: USERNAME,
+        password: PASSWORD,
+        onSuccess: () => {
+          document.getElementById("status").innerText = "✅ Connected";
+          client.subscribe("car/#");
+        },
+        onFailure: (err) => {
+          alert("Connection failed");
+          console.error(err);
+        }
       });
     }
 
-    function sendCommand(cmd) {
+    function publish(topic, payload) {
       if (!client || !client.isConnected()) {
         alert("Not connected!");
         return;
       }
-      const message = new Paho.MQTT.Message(cmd);
-      message.destinationName = TOPIC;
-      client.send(message);
-      console.log("Sent:", cmd);
+      const msg = new Paho.MQTT.Message(payload);
+      msg.destinationName = topic;
+      client.send(msg);
+      console.log("Sent:", topic, payload);
     }
   </script>
 </body>
