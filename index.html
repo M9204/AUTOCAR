@@ -83,91 +83,152 @@
   </div>
 
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-  <script>
-    const NUM_RELAYS = 4;
-    let relayState = Array(NUM_RELAYS).fill(false);
-    let client = null;
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<script>
+  const NUM_RELAYS = 6;
 
-    const logEl = document.getElementById("log");
-    function log(msg) {
-      const t = new Date().toLocaleTimeString();
-      logEl.innerText = `[${t}] ${msg}\n` + logEl.innerText;
+  // Relay labels
+  const relayNames = [
+    "ACC",
+    "IGN 1",
+    "IGN 2",
+    "START",
+    "LOCK 🔒",
+    "UNLOCK 🔓"
+  ];
+
+  let relayState = Array(NUM_RELAYS).fill(false);
+  let client = null;
+
+  const logEl = document.getElementById("log");
+  function log(msg) {
+    const t = new Date().toLocaleTimeString();
+    logEl.innerText = `[${t}] ${msg}\n` + logEl.innerText;
+  }
+
+  function buildRelays() {
+    const c = document.getElementById("relaysContainer");
+    c.innerHTML = "";
+
+    for (let i = 0; i < NUM_RELAYS; i++) {
+      // Door relays handled separately
+      if (i >= 4) continue;
+
+      const btn = document.createElement("button");
+      btn.className = "relay-btn";
+      btn.id = "relayBtn" + i;
+      btn.innerText = `${relayNames[i]}: OFF`;
+      btn.onclick = () => toggleRelay(i);
+      c.appendChild(btn);
     }
 
-    function buildRelays() {
-      const c = document.getElementById("relaysContainer");
-      c.innerHTML = "";
-      for (let i=0;i<NUM_RELAYS;i++) {
-        const btn = document.createElement("button");
-        btn.className = "relay-btn";
-        btn.id = "relayBtn"+i;
-        btn.innerText = `Relay ${i}: OFF`;
-        btn.onclick = ()=> toggleRelay(i);
-        c.appendChild(btn);
-      }
+    // Door buttons
+    const lockBtn = document.createElement("button");
+    lockBtn.className = "relay-btn";
+    lockBtn.innerText = "🔒 LOCK DOORS";
+    lockBtn.onclick = lockDoors;
+
+    const unlockBtn = document.createElement("button");
+    unlockBtn.className = "relay-btn";
+    unlockBtn.innerText = "🔓 UNLOCK DOORS";
+    unlockBtn.onclick = unlockDoors;
+
+    c.appendChild(lockBtn);
+    c.appendChild(unlockBtn);
+  }
+
+  buildRelays();
+
+  function setRelayUi(i, on) {
+    relayState[i] = on;
+    const b = document.getElementById("relayBtn" + i);
+    if (!b) return;
+    b.classList.toggle("on", on);
+    b.innerText = `${relayNames[i]}: ${on ? "ON" : "OFF"}`;
+  }
+
+  function toggleRelay(i) {
+    if (!client || !client.connected) {
+      log("Not connected");
+      return;
     }
-    buildRelays();
+    const newState = !relayState[i];
+    client.publish(`car/relay/${i}`, newState ? "on" : "off");
+    log(`OUT car/relay/${i} => ${newState ? "on" : "off"}`);
+    setRelayUi(i, newState);
+  }
 
-    function setRelayUi(i, on) {
-      relayState[i]=on;
-      const b=document.getElementById("relayBtn"+i);
-      if(!b) return;
-      b.classList.toggle("on",on);
-      b.innerText=`Relay ${i}: ${on?"ON":"OFF"}`;
+  function lockDoors() {
+    if (!client || !client.connected) return;
+    client.publish("car/door/lock", "on");
+    log("OUT car/door/lock => on");
+  }
+
+  function unlockDoors() {
+    if (!client || !client.connected) return;
+    client.publish("car/door/unlock", "on");
+    log("OUT car/door/unlock => on");
+  }
+
+  function handleIncoming(topic, msg) {
+    if (topic === "car/started") {
+      const on = (msg === "true" || msg === "on");
+      document.getElementById("carDot").className = "dot " + (on ? "on" : "off");
+      document.getElementById("carStatusText").innerText = on ? "Car Started" : "Car Stopped";
+    }
+    else if (topic.startsWith("car/relay/") && topic.endsWith("/state")) {
+      const idx = parseInt(topic.split("/")[2], 10);
+      if (idx < 4) setRelayUi(idx, msg === "on");
+    }
+  }
+
+  document.getElementById("startBtn").onclick = () => {
+    client?.publish("car/start", "start");
+    log("OUT car/start => start");
+  };
+
+  document.getElementById("stopBtn").onclick = () => {
+    client?.publish("car/start", "stop");
+    log("OUT car/start => stop");
+  };
+
+  document.getElementById("clearLog").onclick = () => logEl.innerText = "";
+
+  document.getElementById("connectBtn").onclick = () => {
+    if (client && client.connected) {
+      client.end(true);
+      return;
     }
 
-    function toggleRelay(i) {
-      if(!client||!client.connected) { log("Not connected"); return; }
-      const newState=!relayState[i];
-      client.publish(`car/relay/${i}`, newState?"on":"off");
-      log(`OUT car/relay/${i} => ${newState?"on":"off"}`);
-      setRelayUi(i,newState);
-    }
+    const host = document.getElementById("host").value.trim();
+    const port = document.getElementById("wsport").value.trim();
+    const user = document.getElementById("user").value.trim();
+    const pass = document.getElementById("pass").value;
 
-    function handleIncoming(topic,msg){
-      if(topic==="car/started"){
-        const on=(msg==="true"||msg==="on");
-        document.getElementById("carDot").className="dot "+(on?"on":"off");
-        document.getElementById("carStatusText").innerText=on?"Car Started":"Car Stopped";
-      }
-      else if(topic.startsWith("car/relay/") && topic.endsWith("/state")){
-        const idx=parseInt(topic.split("/")[2],10);
-        setRelayUi(idx,msg==="on");
-      }
-    }
+    const url = `wss://${host}:${port}/mqtt`;
+    log(`Connecting to ${url}`);
 
-    document.getElementById("startBtn").onclick=()=>{
-      client?.publish("car/start","start");
-      log("OUT car/start => start");
-    };
-    document.getElementById("stopBtn").onclick=()=>{
-      client?.publish("car/start","stop");
-      log("OUT car/start => stop");
-    };
-    document.getElementById("clearLog").onclick=()=> logEl.innerText="";
+    client = mqtt.connect(url, {
+      username: user,
+      password: pass,
+      clientId: "web_" + Math.random().toString(16).slice(2)
+    });
 
-    document.getElementById("connectBtn").onclick=()=>{
-      if(client && client.connected){ client.end(true); return; }
-      const host=document.getElementById("host").value.trim();
-      const port=document.getElementById("wsport").value.trim();
-      const user=document.getElementById("user").value.trim();
-      const pass=document.getElementById("pass").value;
-      const url=`wss://${host}:${port}/mqtt`;
-      log(`Connecting to ${url}`);
-      client=mqtt.connect(url,{username:user,password:pass,clientId:"web_"+Math.random().toString(16).slice(2)});
-      client.on("connect",()=>{
-        log("Connected ✅");
-        document.getElementById("connState").innerText="Connected";
-        document.getElementById("connDot").className="dot on";
-        client.subscribe("car/#");
-      });
-      client.on("message",(t,p)=>handleIncoming(t,p.toString()));
-      client.on("close",()=>{
-        document.getElementById("connState").innerText="Disconnected";
-        document.getElementById("connDot").className="dot off";
-        log("Disconnected");
-      });
-    };
-  </script>
+    client.on("connect", () => {
+      log("Connected ✅");
+      document.getElementById("connState").innerText = "Connected";
+      document.getElementById("connDot").className = "dot on";
+      client.subscribe("car/#");
+    });
+
+    client.on("message", (t, p) => handleIncoming(t, p.toString()));
+
+    client.on("close", () => {
+      document.getElementById("connState").innerText = "Disconnected";
+      document.getElementById("connDot").className = "dot off";
+      log("Disconnected");
+    });
+  };
+</script>
 </body>
 </html>
